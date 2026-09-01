@@ -1,0 +1,162 @@
+version: '3'
+
+# Deployment tasks for TBR.
+#
+# The app is a static export with no backend (docs/05-architecture.md), so
+# deploying is: verify locally, then hand the repo to Vercel. The project is
+# already linked via .vercel/project.json, so no target needs naming.
+#
+# Note that `vercel --prod` builds from source on Vercel's side rather than
+# uploading the local `out/`. The local build and the checks below are a
+# pre-flight gate: they catch a broken build before it reaches production,
+# not a substitute for it.
+
+vars:
+  SITE_URL: https://tbr-navy.vercel.app
+  OUT_DIR: out
+  # The registered toolset. `verify:tools` asserts each name survives into the
+  # bundle, which catches a tool silently dropped from the array in tools.ts.
+  TOOL_NAMES: >-
+    search_catalog search_my_books get_taste_profile add_book
+    update_book remove_book import_books navigate_to
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  # --- local development -----------------------------------------------
+
+  dev:
+    desc: Run the dev server
+    cmds:
+      - npm run dev
+
+  check:
+    desc: Lint and typecheck
+    cmds:
+      - npm run lint
+      - npx tsc --noEmit
+
+  build:
+    desc: Build the static export into out/
+    cmds:
+      - npm run build
+    sources:
+      - src/**/*
+      - next.config.ts
+      - package.json
+    generates:
+      - '{{.OUT_DIR}}/**/*'
+
+  serve:
+    desc: Serve the built export locally (next start does not apply to an export)
+    deps: [build]
+    cmds:
+      - npx serve {{.OUT_DIR}}
+
+  clean:
+    desc: Remove build output
+    cmds:
+      - rm -rf {{.OUT_DIR}} .next tsconfig.tsbuildinfo
+
+  # --- pre-flight verification -----------------------------------------
+
+  verify:tools:
+    desc: Assert all eight WebMCP tool names survive into the built bundle
+    silent: true
+    preconditions:
+      - sh: test -d {{.OUT_DIR}}
+        msg: "No {{.OUT_DIR}}/ — run `task build` first."
+    cmds:
+      - |
+        missing=0
+        for name in {{.TOOL_NAMES}}; do
+          if grep -rqF "$name" {{.OUT_DIR}}/; then
+            echo "  ok      $name"
+          else
+            echo "  MISSING $name"
+            missing=$((missing + 1))
+          fi
+        done
+        if [ "$missing" -gt 0 ]; then
+          echo "$missing tool(s) absent from the bundle. Check the exported array in src/lib/webmcp/tools.ts."
+          exit 1
+        fi
+        echo "All 8 tools present in {{.OUT_DIR}}/."
+
+  verify:live:
+    desc: Check the deployed URL is reachable over HTTPS with no login wall
+    silent: true
+    cmds:
+      - |
+        echo "Checking {{.SITE_URL}}"
+        read -r status redirects final <<EOF
+        $(curl -sS -o /dev/null -L \
+            -w '%{http_code} %{num_redirects} %{url_effective}' \
+            {{.SITE_URL}})
+        EOF
+
+        echo "  status     $status"
+        echo "  redirects  $redirects"
+        echo "  final URL  $final"
+
+        case "$final" in
+          https://*) ;;
+          *) echo "FAIL: not served over HTTPS — WebMCP requires a secure context."; exit 1 ;;
+        esac
+
+        if [ "$status" != "200" ]; then
+          echo "FAIL: expected 200."
+          exit 1
+        fi
+
+        # A redirect away from the origin is the login-wall signature the
+        # deployment checklist in docs/05-architecture.md guards against.
+        case "$final" in
+          {{.SITE_URL}}*) ;;
+          *) echo "FAIL: redirected off-origin, which suggests an auth wall."; exit 1 ;;
+        esac
+
+        echo "OK: reachable, HTTPS, no interstitial."
+
+  verify:
+    desc: Run every pre-flight check against a fresh build
+    cmds:
+      - task: check
+      - task: build
+      - task: verify:tools
+
+  # --- deployment -------------------------------------------------------
+
+  deploy:
+    desc: Verify, then deploy to production
+    cmds:
+      - task: verify
+      - vercel --prod
+      - task: verify:live
+
+  deploy:preview:
+    desc: Deploy a preview build and print its URL
+    cmds:
+      - task: verify
+      - vercel
+
+  status:
+    desc: Show recent deployments
+    cmds:
+      - vercel ls
+
+  rollback:
+    desc: 'Roll production back to a previous deployment: task rollback -- <url>'
+    silent: true
+    cmds:
+      - |
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Pass a deployment URL, e.g. task rollback -- https://tbr-abc123.vercel.app"
+          echo "Run \`task status\` to list them."
+          exit 1
+        fi
+      - vercel rollback {{.CLI_ARGS}}
