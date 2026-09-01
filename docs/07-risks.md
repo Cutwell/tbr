@@ -29,17 +29,33 @@ than localhost.
 
 ### R2 — Cold-start demonstration has no data
 
-**Impact: fatal to the primary journey · Status: closed**
+**Impact: fatal to the primary journey · Status: closed, by a different means
+than originally planned**
 
 A judge with empty `localStorage` asking what to read next receives an accurate
 report of insufficient history from `get_taste_profile`. The primary journey
 produces nothing for the intended audience.
 
-**Mitigation.** 80 books seeded on first visit with deliberate taste signal
-([05-architecture.md](05-architecture.md)). Recovery is a documented
-`localStorage` deletion rather than a control, since a control that erases the
-reader's list does not belong in a reading list and invites accidental
-activation during recording.
+**Original mitigation.** 80 books seeded automatically on first visit.
+
+**Why that was replaced.** Auto-seeding traded one problem for a worse one. It
+filled a stranger's reading list with books they had never read, without
+asking, and it obscured the premise that the shelf is theirs — a reading list
+that arrives pre-populated is not a reading list. The risk it was guarding
+against is real, but the guard was aimed at the demo rather than the product.
+
+**Current mitigation.** The library starts empty and the shelf renders a
+first-run panel offering four ways in, one of which loads the same curated
+demo library on request ([05-architecture.md](05-architecture.md)). A judge is
+one click from a full 80-book profile, and a reader is zero clicks from a list
+that is actually theirs. `resetList()` and `loadDemo()` on `window` move
+between the two states without a reload.
+
+**Residual risk.** A judge who neither reads the panel nor clicks anything
+still sees an empty shelf, which is one interaction more than before. The panel
+is the whole page at that point, the demo card names what it does, and the
+demo remains a single click, so the exposure is small and is the price of not
+writing to someone's list unasked.
 
 ---
 
@@ -107,6 +123,14 @@ live demonstration, an agent adding the wrong book presents as a product defect.
 both agent and reader; keep `limit` at 10 so the correct answer falls in range;
 rehearse with the exact queries used on camera; retain the manual add path as a
 visible fallback; select demonstration books that rank first.
+
+**Related, and fixed.** A worse version of this was found on Day 4: `q` is a
+Lucene query string, so `"Title - Author"` returned *nothing at all* and
+`"Title by Author"` returned the wrong book. Both are the most natural way a
+person types a search. `normalizeQuery` now neutralises the operators before
+the request ([05-architecture.md](05-architecture.md)). Worth noting the
+distinction — R6 is imprecise ranking, which cannot be fixed from the client;
+that was malformed queries, which could.
 
 ---
 

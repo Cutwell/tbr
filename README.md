@@ -109,19 +109,24 @@ await __tbrTools.get_taste_profile({})
 await __tbrTools.search_my_books({ status: "tbr", limit: 5 })
 ```
 
-### Resetting the demo library
+### Starting over, and the demo library
 
-The library lives in `localStorage` and is seeded with 80 books on first visit.
-There is deliberately no reset control, since a control that erases a reading
-list does not belong in a reading list. Restoring the seeded state is a matter
-of clearing the key and reloading:
+The library starts **empty** and lives in `localStorage`. Nothing is
+pre-populated: the shelf offers four ways to begin — search the catalogue, ask
+an agent to read a photograph of your shelves, import a Goodreads CSV, or load
+a demo library of 80 books curated so the taste profile has something real to
+work with.
+
+There is deliberately no reset *control*, since a control that erases a reading
+list does not belong in a reading list. Two functions are on `window` instead:
 
 ```js
-localStorage.removeItem("tbr.library.v1"); location.reload();
+resetList()   // back to the empty first-run state
+loadDemo()    // load the 80-book demo library
 ```
 
-Any empty or corrupt value reseeds automatically, so deletion is the complete
-procedure. The Open Library cache clears the same way:
+Both write through the store, so the shelf updates immediately — no reload. The
+Open Library cache is separate and clears on its own key:
 
 ```js
 Object.keys(localStorage).filter(k => k.startsWith("tbr.cache")).forEach(k => localStorage.removeItem(k));
@@ -159,12 +164,14 @@ src/components/
   atoms/       Button  Chip  Icon  IconButton  ShelfDot  Spinner  Star  TextInput
   molecules/   BookCover  EmptyState  FilterBar  NavLink  SearchField
                ShelfBadge  StarRating  StatFigure  ThemeToggle
-  organisms/   AgentIndicator  BookCard  BookGrid  ConfirmDialog  ImportPanel
-               NavigationController  SiteHeader  TasteProfile  ToastStack
+  organisms/   AgentIndicator  BookCard  BookGrid  ConfirmDialog  FirstRunPanel
+               ImportPanel  NavigationController  SiteHeader  TasteProfile
+               ToastStack
   templates/   AppShell        ← header, page slot, global surfaces
 
 src/lib/
-  store/       store  profile  seed  notifications  confirmations  useLibrary
+  store/       store  profile  seed  goodreads  notifications  confirmations
+               useLibrary
   catalog/     openlibrary  cache                   ← Open Library client
   webmcp/      adapter  tools  format  input  register  activity
 ```

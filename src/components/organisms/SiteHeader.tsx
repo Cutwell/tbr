@@ -60,7 +60,9 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {isShelf && (
+      {/* Hidden on an empty library: a row of zeroes and em dashes above the
+          first-run panel describes nothing and undercuts what it is offering. */}
+      {isShelf && books.length > 0 && (
         <div className="mt-8 flex flex-wrap gap-x-10 gap-y-5">
           <StatFigure value={counts.tbr} label="Waiting" tone="var(--shelf-tbr)" />
           <StatFigure value={counts.read} label="Finished" tone="var(--shelf-read)" />

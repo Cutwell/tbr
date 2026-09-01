@@ -72,7 +72,8 @@ src/components/  atoms → molecules → organisms → templates
   templates/AppShell.tsx    header, page slot, global surfaces, start-up
 
 src/lib/
-  store/     store  profile  seed  notifications  confirmations  useLibrary
+  store/     store  profile  seed  goodreads  notifications  confirmations
+             useLibrary
   catalog/   openlibrary  cache
   webmcp/    adapter  tools  format  input  register  activity
 ```
@@ -97,27 +98,61 @@ indicator reports "unsupported" and links to setup instructions. Judges are
 likely to open the URL in an ordinary browser first, and an explicit unsupported
 state distinguishes correct host detection from a broken page.
 
-## Seed data
+## First run, and the demo library
 
 A judge opening the URL with empty `localStorage` and asking what to read next
 would receive an accurate report of insufficient history from
 `get_taste_profile` and an empty result from `search_my_books`. The primary
 journey would produce nothing for the intended audience.
 
-The application therefore seeds 80 books on first visit: 24 TBR, 47 read, 9 DNF.
-The history is curated rather than random so that the profile has structure to
-find, including a cluster of highly-rated Le Guin, one author abandoned
+For most of the build the answer was to seed 80 books automatically on first
+visit. That solved the demo problem and created a worse one: it filled a
+stranger's reading list with books they had never read, without asking, and in
+doing so hid the fact that the shelf is genuinely theirs. A reading list that
+arrives pre-populated is not a reading list.
+
+**The library now starts empty**, and the shelf renders `FirstRunPanel` in
+place of the grid: four real ways in, ordered so that the two which add the
+reader's *own* books come first.
+
+| Route | Goes to |
+|---|---|
+| Search the catalogue | `/search` |
+| Ask your agent — photograph a shelf, have it add what it reads | in place, when a host is present |
+| Import from Goodreads | `/search?import=1`, panel open on arrival |
+| Load the demo library | `library.loadDemo()` |
+
+The demo set is unchanged and still curated rather than random, so the profile
+has structure to find: a cluster of highly-rated Le Guin, one author abandoned
 repeatedly, a pronounced skew toward older speculative fiction, and enough TBR
 entries for a recommendation to constitute a real choice. Titles, years and
-cover ids were resolved against the live API, so covers render.
+cover ids were resolved against the live API, so covers render. It is now
+something a reader chooses, one option among four, rather than something
+applied to them.
 
-There is no reset control in the interface. An earlier draft included one on the
-reasoning that judges experiment and need a way back, but a control that erases
-the reader's list does not belong in a reading list, and it invites accidental
-activation during a recording. Resetting is documented in the README as a
-`localStorage` deletion, which reaches the audience that needs it. An empty or
-corrupt stored value reseeds on hydrate, so deleting the key is the complete
-procedure.
+The agent route adapts to the host: it promises an agent only when one is
+actually registered and not merely polyfilled, since the polyfill registers
+tools no external agent can see. Otherwise it names the browsers where it works.
+
+An empty library is now a first-class state rather than a signal to reseed —
+`hydrate` respects a stored `[]` exactly as it respects a stored 80. That is
+what makes a reset stick across a reload.
+
+### Resetting
+
+Still no reset control in the interface, and for the original reason: a control
+that erases the reader's list does not belong in a reading list, and it invites
+accidental activation during a recording. But "delete the key in devtools" was
+a poor answer for the one audience that needs it, so the store exposes two
+functions on `window` in production:
+
+```js
+resetList()   // back to the empty first-run state
+loadDemo()    // the 80-book demo library
+```
+
+Both write through the store, so the shelf re-renders immediately with no
+reload. A one-line `console.info` on start-up makes them discoverable.
 
 ## Catalogue integration
 
@@ -138,6 +173,26 @@ Findings from testing against the live API:
   index requires `q=key:/works/OL3511459W`. The failure is quiet and expensive:
   a caller interpreting "no match" as "use the supplied value" shelves a book
   titled `OL3511459W`. `lookupByKey` handles this.
+- **`q` is a Lucene query string, not a free-text box** — the `key:` syntax
+  above is the proof. Handing it a human's phrasing unmodified breaks the single
+  most natural way to search for a book. Measured against the live API:
+
+  | Query | Result |
+  |---|---|
+  | `The Dispossessed - Ursula Le Guin` | 0 results |
+  | `The Dispossessed by Ursula Le Guin` | 1 result, and it is *The Lathe of Heaven* |
+  | `Sold by Patricia McCormick` | 0 results |
+
+  Two causes. A `-` that *opens a token* is Lucene's NOT operator, so the usual
+  "Title - Author" separator asks Open Library to exclude the author, which can
+  never match. And terms are AND-ed, so `by` becomes a required term the record
+  must physically contain. `normalizeQuery` neutralises both, and every case
+  above then returns the right book first.
+
+  It is specifically token-*initial* dashes that are operators: `Slaughterhouse-Five`
+  and `Spider-Man` search correctly and must keep doing so, which is why a
+  blanket strip would be a regression. `searchCatalog` normalises; `lookupByKey`
+  calls the raw path, because its `key:` prefix is deliberate syntax.
 - **Relevance ranking is imprecise.** "the dispossessed" ranks *The Lathe of
   Heaven* second, so year and author appear everywhere to support
   disambiguation.
@@ -146,7 +201,8 @@ Findings from testing against the live API:
   and cover presence second; where only a translation exists, the reader's title
   is retained and that edition's cover borrowed.
 - **`author_name` is an array**, and the first element is used.
-- **`cover_i` is absent for roughly one work in 25**, three of the 80 seeded.
+- **`cover_i` is absent for roughly one work in 25**, three of the 80 in the
+  demo library.
   The typographic fallback sets the title in the display face on sunk paper, so
   it reads as a plain clothbound edition rather than as missing data.
 - The reader-facing search field debounces at approximately 300ms. The tool path

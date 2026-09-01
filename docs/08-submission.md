@@ -68,7 +68,8 @@ rather than describing it.
 - Show the Site tools panel at least once, as evidence the tools are real
 - Deliver from bullets rather than reading prose verbatim
 - Hard stop at 2:50; exceeding 3:00 risks disqualification
-- Cold profile, seeded library, rehearsed queries ([07-risks.md](07-risks.md), R6)
+- Cold profile, demo library loaded from the first-run panel, rehearsed queries
+  ([07-risks.md](07-risks.md), R6)
 
 ---
 
@@ -143,7 +144,8 @@ against a length limit.
 - [x] Ordinary browser: explicit unsupported state, application fully usable by
       hand
 - [ ] Tested on a machine that has never run the dev server
-- [ ] Tested with empty `localStorage`, confirming the seed library appears
+- [ ] Tested with empty `localStorage`, confirming the first-run panel appears
+      and its demo card loads the 80-book library
 - [ ] Tested in ChatGPT’s in-app browser, confirming all seven tools under Site
       tools
 - [ ] Tested in Chrome with `chrome://flags/#enable-webmcp-testing`

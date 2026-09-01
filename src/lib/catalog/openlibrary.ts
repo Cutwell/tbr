@@ -53,20 +53,66 @@ const searchCache = new PersistentCache<CatalogResult[]>({
   max: 120,
 });
 
-export async function searchCatalog(
-  query: string,
-  limit = 10,
+/**
+ * Makes a human's phrasing safe to hand to a Lucene query parser.
+ *
+ * `q` is not a free-text box. It is a Lucene query string — `lookupByKey`
+ * below depends on exactly that, using `key:/works/...` field syntax — and the
+ * single most natural way to search for a book walks straight into it:
+ *
+ *   "The Dispossessed - Ursula Le Guin"    0 results
+ *   "The Dispossessed by Ursula Le Guin"   1 result, and it is The Lathe of Heaven
+ *   "Sold by Patricia McCormick"           0 results
+ *
+ * Two distinct causes, both measured against the live API:
+ *
+ * 1. A `-` that *opens a token* is Lucene's NOT operator. Typing the usual
+ *    "Title - Author" separator therefore asks Open Library to exclude the
+ *    author, which cannot ever match the book. Note this is strictly about
+ *    token-initial dashes: `Slaughterhouse-Five` and `Spider-Man` search
+ *    correctly and must keep working, so a blanket strip would be a
+ *    regression.
+ * 2. Terms are AND-ed, so `by` becomes a *required* term that has to appear in
+ *    the record. Most do not carry it, which is why the good match is dropped
+ *    and something worse survives.
+ *
+ * A leading "by" is left alone, because titles legitimately start with it
+ * ("By the Sea") and there is no author to separate at position zero.
+ */
+export function normalizeQuery(raw: string): string {
+  return (
+    raw
+      // A dash or pipe standing alone between two terms is a separator, not an
+      // operator or part of a word. Covers ASCII, en, em, horizontal bar, minus.
+      .replace(/(^|\s+)[-+–—―−|]+(\s+|$)/g, " ")
+      // A token-initial `-` or `+` is NOT / MUST. Strip the operator, keep the word.
+      .replace(/(^|\s)[-+]+(?=\S)/g, "$1")
+      // "Title by Author" — drop the connector, never a leading one.
+      .replace(/(\S)\s+by\s+/gi, "$1 ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
+}
+
+/**
+ * The raw search path: `q` is passed through untouched.
+ *
+ * Internal because every caller carrying a human's words wants
+ * `searchCatalog`, which normalises first. This exists for `lookupByKey`,
+ * whose `key:` field query is deliberate Lucene syntax that normalisation must
+ * not touch.
+ */
+async function runSearch(
+  q: string,
+  limit: number,
   signal?: AbortSignal,
 ): Promise<CatalogResult[]> {
-  const trimmed = query.trim();
-  if (!trimmed) return [];
-
-  const cacheKey = `${trimmed.toLowerCase()}::${limit}`;
+  const cacheKey = `${q.toLowerCase()}::${limit}`;
   const hit = searchCache.get(cacheKey);
   if (hit) return hit;
 
   const url = new URL(SEARCH_ENDPOINT);
-  url.searchParams.set("q", trimmed);
+  url.searchParams.set("q", q);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("fields", FIELDS);
 
@@ -91,6 +137,23 @@ export async function searchCatalog(
 
   searchCache.set(cacheKey, results);
   return results;
+}
+
+/**
+ * Catalogue search for anything a person or an agent typed.
+ *
+ * Normalises first — see `normalizeQuery` for what a raw Lucene `q` does to an
+ * ordinary "title author" phrasing.
+ */
+export async function searchCatalog(
+  query: string,
+  limit = 10,
+  signal?: AbortSignal,
+): Promise<CatalogResult[]> {
+  const normalized = normalizeQuery(query);
+  if (!normalized) return [];
+
+  return runSearch(normalized, limit, signal);
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +280,10 @@ export async function fetchWorkDetail(
  * a caller that treats "no match" as "use what I was given" ends up creating a
  * book titled "OL3511459W".
  *
+ * This calls `runSearch` rather than `searchCatalog` for that reason: the `key:`
+ * prefix is intentional Lucene syntax, and it is the one query in the codebase
+ * that must reach Open Library exactly as written.
+ *
  * The works endpoint (`/works/{key}.json`) also has the title, but its authors
  * are unresolved references needing a second request each, whereas this returns
  * title, author, year and cover in one.
@@ -225,7 +292,7 @@ export async function lookupByKey(
   olKey: string,
   signal?: AbortSignal,
 ): Promise<CatalogResult | null> {
-  const results = await searchCatalog(`key:/works/${olKey}`, 1, signal);
+  const results = await runSearch(`key:/works/${olKey}`, 1, signal);
   const [match] = results;
   return match?.olKey === olKey ? match : null;
 }

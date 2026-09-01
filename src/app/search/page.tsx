@@ -53,7 +53,13 @@ function SearchPage() {
 
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [showImport, setShowImport] = useState(false);
+
+  /**
+   * `?import=1` opens the Goodreads panel on arrival, which is how the
+   * first-run panel links here. An initialiser is enough: that link is only
+   * ever offered from the shelf, so this page is mounting, not re-rendering.
+   */
+  const [showImport, setShowImport] = useState(() => params.get("import") === "1");
   const requestId = useRef(0);
 
   const ownedKeys = useMemo(

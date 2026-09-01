@@ -137,7 +137,7 @@ Four routes, all statically exported.
 
 | Route | Contents |
 |---|---|
-| `/` | The shelf: filter chips, book grid, empty state. The default view. |
+| `/` | The shelf: filter chips, book grid, and — on an empty library — the first-run panel. The default view. |
 | `/search` | Catalogue search, add, and the CSV paste field |
 | `/taste` | The reading profile, over the same data `get_taste_profile` returns |
 | `/book?id=` | A single book: synopsis, subjects, shelf, rating |

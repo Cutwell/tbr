@@ -66,9 +66,10 @@ the result is presentable.
 Exit criteria met: every tool callable, every output within 1,500 characters,
 every error path naming a next step.
 
-### Day 4 — Seed, polish, rehearse
+### Day 4 — First run, polish, rehearse
 
-- [x] Seed library: 80 books with real covers and deliberate taste signal
+- [x] Demo library: 80 books with real covers and deliberate taste signal
+      (loaded on request from the first-run panel, not seeded automatically)
       ([05-architecture.md](05-architecture.md))
 - [x] Explicit unsupported state when no WebMCP host is present
 - [x] `navigate_to`, aligning on-screen state with the conversation
@@ -106,8 +107,9 @@ nothing new begins. Production changes stop by 11am PDT.
 Days 1 to 3 are complete and were delivered ahead of schedule. The following
 exists:
 
-- The full human application: four routes, light and dark, responsive, with an
-  80-book library
+- The full human application: four routes, light and dark, responsive, opening
+  on an empty shelf with a four-way first-run panel (the 80-book demo library
+  is one of its options)
 - Seven WebMCP tools. The first six are verified live in the ChatGPT browser;
   `navigate_to` postdates that pass and awaits confirmation there
 - Agent steering across all three channels
@@ -134,8 +136,8 @@ Accepted gaps:
 - A transient cover failure falls back for the remainder of that session rather
   than retrying. It self-heals on reload; the underlying rate is 3 of 80 books
   with no cover art at all.
-- No reset control in the interface, by design
-  ([05-architecture.md](05-architecture.md)).
+- No reset control in the interface, by design; `resetList()` and `loadDemo()`
+  on `window` serve that need instead ([05-architecture.md](05-architecture.md)).
 
 ---
 
@@ -151,7 +153,7 @@ landed exactly as the list predicted: the journey still demonstrates.
 3. The `note` field, removing a parameter from two schemas
 4. Era analysis in the taste profile, retaining authors and ratings only
 
-Excluded from cutting: `get_taste_profile`, the seed library,
+Excluded from cutting: `get_taste_profile`, the demo library,
 `requestUserInteraction`, and the agent activity indicator. These four map
 directly onto WebMCP Leverage and human-agent collaboration, which is half the
 rubric.

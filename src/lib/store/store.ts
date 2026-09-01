@@ -257,12 +257,14 @@ function addMany(inputs: NewBook[]): { added: number; duplicates: number } {
 // ---------------------------------------------------------------------------
 
 /**
- * Loads from localStorage, seeding a demo library when empty.
+ * Loads whatever the reader already has. Nothing is seeded.
  *
- * The seed is not a convenience. A judge opening the live URL with empty
- * storage would ask "what should I read next?" and get an honest "not enough
- * history" — the flagship journey producing nothing for the one person who
- * matters. See docs/07-risks.md, R2.
+ * TBR used to plant the 80-book demo library on first visit, on the reasoning
+ * that an empty library is a broken demo (docs/07-risks.md, R2). That solved
+ * the right problem the wrong way: it presumed consent to fill someone's
+ * reading list with books they had never read, and it hid the fact that the
+ * shelf is genuinely theirs. The first-run panel now does that job explicitly,
+ * offering the demo as one of four ways in rather than choosing for them.
  */
 function hydrate(): void {
   if (hydrated || typeof window === "undefined") return;
@@ -272,17 +274,38 @@ function hydrate(): void {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      // An empty array is now a real, respected state: a reader who cleared
+      // their list, or one who has not begun. Both mean "show the first-run
+      // panel", and neither means "plant 80 books they did not ask for".
+      if (Array.isArray(parsed)) {
         books = Object.freeze(parsed as Book[]);
         emit();
         return;
       }
     }
   } catch {
-    // Corrupt payload — fall through and reseed rather than showing a blank app.
+    // Corrupt payload — start empty rather than rendering a broken shelf.
   }
 
-  commit(seedLibrary());
+  emit();
+}
+
+/**
+ * Replaces the library with the curated demo set. Returns how many landed.
+ *
+ * No `markTouched` here, unlike every other bulk write: highlighting a dozen
+ * arbitrary books out of eighty says nothing. The grid arriving at once is
+ * already the visible event.
+ */
+function loadDemo(): number {
+  const demo = seedLibrary();
+  commit(demo);
+  return demo.length;
+}
+
+/** Back to the first-run state: an empty shelf and the panel that explains it. */
+function reset(): void {
+  commit([]);
 }
 
 function profile() {
@@ -302,6 +325,35 @@ function touch(ids: string[]): void {
   emit();
 }
 
+/**
+ * The console escape hatch, for readers who want their shelf back to nothing.
+ *
+ * Deliberately the console rather than a button. A control that erases a
+ * reading list does not belong in a reading list, and one sitting beside a
+ * loaded demo library is a mis-click away from destroying the thing being
+ * demonstrated (docs/05-architecture.md). Everything lives in localStorage, so
+ * the data is the reader's outright; what was missing was a way to say "start
+ * over" without opening devtools' storage inspector.
+ *
+ * Unlike `__tbrTools`, this ships in production. That is the point of it.
+ */
+function exposeConsoleApi(): void {
+  if (typeof window === "undefined") return;
+
+  const api = window as unknown as Record<string, unknown>;
+  api.resetList = () => {
+    reset();
+    return "Your list is empty. Reload not needed.";
+  };
+  api.loadDemo = () => `Loaded ${loadDemo()} demo books.`;
+
+  console.info(
+    "%cTBR%c  resetList() empties your shelf · loadDemo() loads the example library",
+    "font-weight:700",
+    "color:inherit",
+  );
+}
+
 export const library = {
   subscribe,
   getSnapshot,
@@ -309,6 +361,9 @@ export const library = {
   getTouched,
   getNoTouched,
   hydrate,
+  exposeConsoleApi,
+  loadDemo,
+  reset,
   all,
   get,
   counts,

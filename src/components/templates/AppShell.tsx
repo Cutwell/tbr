@@ -23,6 +23,7 @@ import { initialiseWebMCP } from "@/lib/webmcp/register";
 export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     library.hydrate();
+    library.exposeConsoleApi();
     void initialiseWebMCP();
   }, []);
 

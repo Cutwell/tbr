@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/molecules/EmptyState";
 import { FilterBar } from "@/components/molecules/FilterBar";
 import { SHELF_LABEL } from "@/components/molecules/ShelfBadge";
 import { BookGrid } from "@/components/organisms/BookGrid";
+import { FirstRunPanel } from "@/components/organisms/FirstRunPanel";
 import { requestConfirmation } from "@/lib/store/confirmations";
 import { usePendingNavigation } from "@/lib/store/navigation";
 import { notify } from "@/lib/store/notifications";
@@ -102,39 +103,43 @@ export default function ShelfPage() {
 
   return (
     <>
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-        <FilterBar active={shelf} counts={counts} total={books.length} onChange={setShelf} />
+      {/* Nothing to filter and nothing to count. Shelf tabs reading zero and a
+          box that filters an empty list are noise above the first-run panel. */}
+      {books.length > 0 && (
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+          <FilterBar active={shelf} counts={counts} total={books.length} onChange={setShelf} />
 
-        <div className="flex w-full items-end gap-4 sm:w-auto">
-          <label className="flex flex-1 items-end gap-2 sm:w-72 sm:flex-none">
-            <span className="sr-only">Filter your shelves</span>
-            <Icon name="search" size={16} className="mb-2 shrink-0 text-ink-faint" />
-            <TextInput
-              type="search"
-              value={search}
-              placeholder="Filter your shelves"
-              onChange={(event) => setSearch(event.target.value)}
-              className="text-sm"
-            />
-          </label>
+          <div className="flex w-full items-end gap-4 sm:w-auto">
+            <label className="flex flex-1 items-end gap-2 sm:w-72 sm:flex-none">
+              <span className="sr-only">Filter your shelves</span>
+              <Icon name="search" size={16} className="mb-2 shrink-0 text-ink-faint" />
+              <TextInput
+                type="search"
+                value={search}
+                placeholder="Filter your shelves"
+                onChange={(event) => setSearch(event.target.value)}
+                className="text-sm"
+              />
+            </label>
 
-          {/* Only offered when there is something to clear — a permanently
-              present button that usually does nothing is just clutter. */}
-          {filtered && (
-            <Button
-              variant="quiet"
-              size="sm"
-              onClick={clearFilters}
-              className="animate-fade mb-0.5 shrink-0"
-            >
-              <Icon name="close" size={14} />
-              Clear filters
-            </Button>
-          )}
+            {/* Only offered when there is something to clear — a permanently
+                present button that usually does nothing is just clutter. */}
+            {filtered && (
+              <Button
+                variant="quiet"
+                size="sm"
+                onClick={clearFilters}
+                className="animate-fade mb-0.5 shrink-0"
+              >
+                <Icon name="close" size={14} />
+                Clear filters
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="mt-9">
+      <div className={books.length > 0 ? "mt-9" : ""}>
         <BookGrid
           books={visible}
           highlighted={highlighted}
@@ -143,16 +148,7 @@ export default function ShelfPage() {
           onRemove={handleRemove}
           empty={
             books.length === 0 ? (
-              <EmptyState
-                title="Nothing on the shelves"
-                description="Search the catalogue for something you have been meaning to read."
-                action={
-                  <Link href="/search" className={buttonStyles("primary")}>
-                    <Icon name="search" size={15} />
-                    Find a book
-                  </Link>
-                }
-              />
+              <FirstRunPanel />
             ) : (
               <EmptyState
                 title="No matches"
