@@ -34,12 +34,50 @@ import { initializeWebMCPPolyfill } from "@mcp-b/webmcp-polyfill";
  * the difference rather than claiming a confirmed agent that may not exist.
  */
 
+/**
+ * MCP tool annotations, with the spec's own defaults recorded.
+ *
+ * Every default here is pessimistic, and omitting an annotation is therefore
+ * not a neutral absence of a claim — it is the loudest claim available. That
+ * is not a theory: it is the first of the four properties that got
+ * `import_books` rejected by a host security review (docs/07-risks.md, R11).
+ * Quoted wording is from the MCP schema, 2025-06-18.
+ */
 export interface ToolAnnotations {
-  /** Tool does not mutate state — the agent may call it without confirming. */
+  /** "If true, the tool does not modify its environment." Default: false. */
   readOnlyHint?: boolean;
-  /** Tool destroys data. */
+  /**
+   * "If true, the tool may perform destructive updates to its environment.
+   * If false, the tool performs only additive updates."
+   *
+   * Meaningful only when `readOnlyHint` is false. **Default: true** — so any
+   * mutating tool that stays silent is declaring itself destructive. Note the
+   * bar for `false` is *additive*, not "harmless" or "reversible": a tool that
+   * replaces a field's value does not clear it.
+   */
   destructiveHint?: boolean;
-  /** Output is externally sourced and may carry injected instructions. */
+  /**
+   * "If true, calling the tool repeatedly with the same arguments will have no
+   * additional effect on the its environment."
+   *
+   * Meaningful only when `readOnlyHint` is false. Default: false.
+   */
+  idempotentHint?: boolean;
+  /**
+   * "If true, this tool may interact with an 'open world' of external
+   * entities. If false, the tool's domain of interaction is closed."
+   *
+   * **Default: true.** In TBR only the two tools that call Open Library are
+   * open-world; everything else touches nothing but the local store, and says
+   * so rather than inheriting the opposite.
+   */
+  openWorldHint?: boolean;
+  /**
+   * Output is externally sourced and may carry injected instructions.
+   *
+   * Not an MCP annotation — a WebMCP addition, and the one hint here whose
+   * absence is the safe direction.
+   */
   untrustedContentHint?: boolean;
 }
 

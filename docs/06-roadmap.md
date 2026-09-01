@@ -125,11 +125,12 @@ Outstanding work, in priority order:
 2. **Cold-profile verification** of the live URL in ChatGPT's browser, covering
    the indicator reading "7 tools live" and a walkthrough of A1, A2 and A3.
 3. **Devpost submission**: text, screenshots, links, filed Wednesday.
-4. **Annotate `add_book` and `update_book`.** Both currently declare nothing and
-   therefore inherit `destructiveHint: true`, which is what the `import_books`
-   rejection made legible ([04-tool-design.md](04-tool-design.md), Annotation
-   defaults). Neither destroys anything; both should say so. Small, and it
-   reduces the chance of a second security-review rejection on camera.
+Done since: **every tool now states every applicable annotation**
+([04-tool-design.md](04-tool-design.md), Annotation defaults). Writing them out
+changed two answers that the original note got wrong — `openWorldHint` was
+incorrect on five of seven tools, and `update_book` is genuinely destructive
+rather than merely "corrective", so it declares that instead of the flattering
+version.
 
 Accepted gaps:
 

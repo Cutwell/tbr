@@ -69,6 +69,8 @@ const searchCatalogTool: ToolDescriptor = {
   },
   annotations: {
     readOnlyHint: true,
+    // The one genuinely open world in the toolset, alongside add_book.
+    openWorldHint: true,
     // Open Library is a public wiki: any record is editable by anyone, and its
     // text lands verbatim in the agent's context. That makes this an indirect
     // prompt-injection surface, and the hint is a real mitigation.
@@ -160,7 +162,7 @@ const searchMyBooksTool: ToolDescriptor = {
     required: [],
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true },
+  annotations: { readOnlyHint: true, openWorldHint: false },
   execute: (args) => {
     const shelf = readEnum<Shelf>(args, "status", SHELVES);
     const text = readString(args, "query");
@@ -315,7 +317,7 @@ const tasteProfileTool: ToolDescriptor = {
     "the answer reflects what they actually enjoy rather than what merely " +
     "happens to be on the list.",
   inputSchema: { type: "object", properties: {}, required: [], additionalProperties: false },
-  annotations: { readOnlyHint: true },
+  annotations: { readOnlyHint: true, openWorldHint: false },
   execute: () => {
     const profile = library.profile();
     return ok(renderTasteProfile(profile), profile);
@@ -353,6 +355,17 @@ const addBookTool: ToolDescriptor = {
     },
     required: [],
     additionalProperties: false,
+  },
+  annotations: {
+    // Additive in the strict sense the spec means: it only ever puts a book on
+    // a shelf. A book already there is reported and left exactly as it was —
+    // nothing is overwritten and nothing is removed.
+    destructiveHint: false,
+    // Follows from that dedupe. A second identical call finds the duplicate and
+    // changes nothing, so repeated calls leave the library in one state.
+    idempotentHint: true,
+    // Resolves catalog_id against Open Library, so this genuinely is open-world.
+    openWorldHint: true,
   },
   execute: async (args) => {
     const catalogId = readString(args, "catalog_id");
@@ -443,6 +456,35 @@ const updateBookTool: ToolDescriptor = {
     required: ["book_id"],
     additionalProperties: false,
   },
+  annotations: {
+    /*
+     * Deliberately `true`, which is not what the roadmap item that prompted
+     * this predicted.
+     *
+     * The spec's bar for `destructiveHint: false` is that a tool "performs
+     * only additive updates" — not that it is harmless, or reversible, or
+     * well-intentioned. This tool *replaces* a shelf, a rating or a note, and
+     * the previous value is gone. That is not additive, so claiming otherwise
+     * would be false. It would also repeat the exact mistake behind R11 in
+     * reverse: choosing the annotation that attracts less scrutiny rather than
+     * the one that is true.
+     *
+     * It is the right call on the merits too. An agent that wrongly moves a
+     * book to `dnf` and rates it 1 has overwritten the reader's own judgment
+     * of a book they read, which deserves more scrutiny than adding one does.
+     *
+     * No confirmation dialog, though: rating a book is the single most common
+     * thing a reader asks an agent to do, and a prompt on every star would
+     * make J5 worse than doing it by hand. The properties that made
+     * `import_books` unacceptable are all absent here — one named book, a
+     * closed set of fields, a bounded payload, and no content crossing in from
+     * another origin.
+     */
+    destructiveHint: true,
+    // Setting the same fields to the same values twice lands in one state.
+    idempotentHint: true,
+    openWorldHint: false,
+  },
   execute: (args) => {
     const bookId = readString(args, "book_id");
     if (!bookId) {
@@ -504,7 +546,13 @@ const removeBookTool: ToolDescriptor = {
     required: ["book_id"],
     additionalProperties: false,
   },
-  annotations: { destructiveHint: true },
+  annotations: {
+    destructiveHint: true,
+    // Removing the same book twice leaves the library where the first call put
+    // it; the second merely reports that the id is gone.
+    idempotentHint: true,
+    openWorldHint: false,
+  },
   execute: async (args: ToolArgs, agent?: AgentHandle): Promise<ToolResponse> => {
     const bookId = readString(args, "book_id");
     if (!bookId) {
@@ -622,7 +670,7 @@ const navigateTool: ToolDescriptor = {
     required: ["view"],
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true },
+  annotations: { readOnlyHint: true, openWorldHint: false },
   execute: (args) => {
     const view = readEnum<NavView>(args, "view", NAV_VIEWS);
     if (!view) {

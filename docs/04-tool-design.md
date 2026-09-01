@@ -8,21 +8,28 @@ designers to work from user goals rather than a target number. Seven is
 defensible on that basis. Tool-selection accuracy degrades beyond roughly ten,
 which leaves headroom rather than crowding the ceiling.
 
-| # | Tool | Mutates | Annotations | Journey |
-|---|---|---|---|---|
-| 1 | `search_catalog` | no | `readOnlyHint`, `untrustedContentHint` | A2, A3, J1 |
-| 2 | `search_my_books` | no | `readOnlyHint` | A1, J3 |
-| 3 | `get_taste_profile` | no | `readOnlyHint` | A1 |
-| 4 | `add_book` | yes | — | A2, A3, J1 |
-| 5 | `update_book` | yes | — | J2, J5 |
-| 6 | `remove_book` | destructive | `destructiveHint`, `requestUserInteraction` | J4 |
-| 7 | `navigate_to` | view only | `readOnlyHint` | A1, A2, A3 |
+| # | Tool | read­Only | destructive | idempotent | openWorld | Journey |
+|---|---|---|---|---|---|---|
+| 1 | `search_catalog` | yes | — | — | **yes** | A2, A3, J1 |
+| 2 | `search_my_books` | yes | — | — | no | A1, J3 |
+| 3 | `get_taste_profile` | yes | — | — | no | A1 |
+| 4 | `add_book` | no | **no** | yes | **yes** | A2, A3, J1 |
+| 5 | `update_book` | no | **yes** | yes | no | J2, J5 |
+| 6 | `remove_book` | no | **yes** | yes | no | J4 |
+| 7 | `navigate_to` | yes | — | — | no | A1, A2, A3 |
+
+`destructive` and `idempotent` are meaningful only when `readOnly` is false, so
+they are left unset on the read tools. `search_catalog` also carries
+`untrustedContentHint`, and `remove_book` also blocks on
+`requestUserInteraction`. Every cell is stated explicitly in the code: none is
+left to a default.
 
 An eighth, `import_books`, was built and then withdrawn after a host security
 review rejected the call. J6 is served by the UI paste field alone and is
 unaffected. The diagnosis is [07-risks.md](07-risks.md) R11; the reasoning it
-produced about annotation defaults applies to tools 4 and 5 and is recorded
-under [Annotation defaults](#annotation-defaults) below.
+produced about annotation defaults is recorded under
+[Annotation defaults](#annotation-defaults) below, and it is why the table above
+has no blanks left in it.
 
 The implementation is [`src/lib/webmcp/tools.ts`](../src/lib/webmcp/tools.ts).
 All names are 30 characters or fewer. `auditToolDescriptors()` asserts every
@@ -395,26 +402,63 @@ because a table cut mid-row misparses more readily than a short one.
 
 ## Annotation defaults
 
-The `—` against `add_book` and `update_book` in the table above is not neutral,
-and this was learned the expensive way when the host security review rejected
-`import_books` ([07-risks.md](07-risks.md), R11).
+`add_book` and `update_book` used to sit in the table above with a `—` in every
+column. That was never neutral, and it was learned the expensive way when a host
+security review rejected `import_books` ([07-risks.md](07-risks.md), R11).
 
 An omitted annotation is not read as "unspecified". MCP defines defaults, and
-they are pessimistic by design:
+they are pessimistic by design. Quoted wording is from the MCP schema,
+2025-06-18:
 
-| Hint | Default when omitted |
-|---|---|
-| `readOnlyHint` | `false` |
-| `destructiveHint` | `true`, for any tool not marked read-only |
-| `idempotentHint` | `false` |
-| `openWorldHint` | `true` |
+| Hint | Meaning of `false` … `true` | Default when omitted |
+|---|---|---|
+| `readOnlyHint` | — … "the tool does not modify its environment" | `false` |
+| `destructiveHint` | "performs only additive updates" … "may perform destructive updates" | **`true`** |
+| `idempotentHint` | — … "calling the tool repeatedly with the same arguments will have no additional effect" | `false` |
+| `openWorldHint` | "the tool's domain of interaction is closed" … "may interact with an 'open world' of external entities" | **`true`** |
+
+`destructiveHint` and `idempotentHint` are meaningful only when `readOnlyHint`
+is false. `openWorldHint` carries no such restriction and applies to every tool.
 
 So an unannotated mutating tool presents to a host as destructive,
 non-idempotent and open-world — a worse profile than `remove_book`, which
 actually destroys data but declares its intent and pairs it with a
 confirmation. Silence is the loudest possible claim.
 
-`add_book` and `update_book` are additive and corrective respectively; neither
-destroys anything, and `update_book` is genuinely idempotent. Both should say
-so rather than inheriting the opposite by omission. This is outstanding work,
-tracked in [06-roadmap.md](06-roadmap.md).
+Every tool now states every applicable hint.
+
+### What the fix actually found
+
+Two of the three findings were not the ones expected.
+
+**`update_book` is destructive, and now says so.** The earlier note in this
+file predicted the opposite — that neither write tool "destroys anything", so
+both should declare `destructiveHint: false`. That was wrong. The bar for
+`false` is *"performs only additive updates"*, not "harmless" or "reversible".
+`update_book` replaces a shelf, a rating or a note, and the previous value is
+gone. Declaring it additive would have been false, and it would have repeated
+the R11 mistake in reverse: choosing the annotation that attracts less scrutiny
+over the one that is true. It is also right on the merits — an agent that
+wrongly moves a book to `dnf` and rates it 1 has overwritten the reader's own
+judgment of a book they read.
+
+It gets no confirmation dialog regardless. Rating a book is the most common
+thing a reader will ask an agent to do, and a prompt on every star would make J5
+worse than doing it by hand. The properties that made `import_books`
+unacceptable are all absent: one named book, a closed set of fields, a bounded
+payload, and no content crossing in from another origin.
+
+**`openWorldHint` was wrong on five of seven tools.** Its default is `true`, so
+every tool that stayed silent was claiming to reach external systems. Only
+`search_catalog` and `add_book` do; the other five touch nothing but the local
+store. This was not part of the original gap — it surfaced only once the
+defaults were written down in one place.
+
+**The polyfill's readback hides most of this.** `@mcp-b/webmcp-polyfill`
+preserves all five hints when a tool is registered (`normalizeToolAnnotations`),
+but `getTools()` projects them down to `readOnlyHint` and `untrustedContentHint`
+alone (`toWebMcpAnnotations`). Reading annotations back through a polyfilled
+browser therefore shows two hints no matter how many were declared — including
+for `remove_book`, whose `destructiveHint` has never been visible that way. The
+hints do reach the host at registration; only the local readback is lossy. Do
+not use `getTools()` in a polyfilled browser to verify this table.

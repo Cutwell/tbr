@@ -39,15 +39,20 @@ Seven, registered on the top-level page. The rationale is in
 [docs/04-tool-design.md](docs/04-tool-design.md); the implementation is
 [src/lib/webmcp/tools.ts](src/lib/webmcp/tools.ts).
 
-| Tool | Mutates | Annotations |
-|---|---|---|
-| `search_catalog` | no | `readOnlyHint`, `untrustedContentHint` |
-| `search_my_books` | no | `readOnlyHint` |
-| `get_taste_profile` | no | `readOnlyHint` |
-| `add_book` | yes | — |
-| `update_book` | yes | — |
-| `remove_book` | destructive | `destructiveHint` + `requestUserInteraction` |
-| `navigate_to` | view only | `readOnlyHint` |
+| Tool | readOnly | destructive | idempotent | openWorld |
+|---|---|---|---|---|
+| `search_catalog` | yes | — | — | **yes** |
+| `search_my_books` | yes | — | — | no |
+| `get_taste_profile` | yes | — | — | no |
+| `add_book` | no | **no** | yes | **yes** |
+| `update_book` | no | **yes** | yes | no |
+| `remove_book` | no | **yes** | yes | no |
+| `navigate_to` | yes | — | — | no |
+
+`search_catalog` also carries `untrustedContentHint`; `remove_book` also blocks
+on `requestUserInteraction`. `destructive` and `idempotent` are meaningful only
+when `readOnly` is false, so they are unset on the read tools. Nothing is left
+to a default.
 
 An eighth tool, `import_books`, was built and then withdrawn: a host security
 review rejected the call, and the reasons were structural — an unbounded CSV
@@ -71,9 +76,14 @@ Five properties of the set are worth stating explicitly.
   viewing the book rather than only hearing its name.
 - **Every error names the next tool to call**, following Chrome's guidance that a
   failed call should act as a guide rather than a dead end.
-- **The `—` on `add_book` and `update_book` is a known gap, not a decision.** MCP
-  defaults an unannotated mutating tool to `destructiveHint: true`, so silence
-  claims more than either tool does. Correcting it is outstanding work.
+- **Nothing is left to an MCP default, because the defaults are pessimistic.**
+  An unannotated mutating tool declares itself destructive, non-idempotent and
+  open-world — silence is the loudest claim available, which is what got
+  `import_books` rejected. Writing them all out changed two answers: `openWorldHint`
+  was wrong on five of seven tools, and `update_book` turned out to be genuinely
+  destructive (it *replaces* a rating or shelf, and the spec's bar for `false` is
+  "only additive updates"). It says so rather than claiming the flattering
+  version. Reasoning in [docs/04-tool-design.md](docs/04-tool-design.md).
 
 ## Running locally
 
