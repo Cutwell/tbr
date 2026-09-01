@@ -48,8 +48,9 @@ const searchCatalogTool: ToolDescriptor = {
     "or year. Returns candidates with a catalog_id to pass to add_book. " +
     "Whenever you have identified a book from a photo, a description or your " +
     "own knowledge, resolve it here FIRST, then add it with the catalog_id — " +
-    "that is what gives the book its cover art and publication year. Does not " +
-    "read or change the reader's own list.",
+    "that is what gives the book its cover art and publication year. Shows the " +
+    "matching catalogue search on screen, which is useful when discussing " +
+    "several books. Does not read or change the reader's own list.",
   inputSchema: {
     type: "object",
     properties: {
@@ -98,10 +99,15 @@ const searchCatalogTool: ToolDescriptor = {
         result.year,
       ]);
 
+      // A catalogue query often represents a set — an author's work, a series,
+      // or several possible matches. Put that set on screen immediately rather
+      // than making the reader infer it from a tool response.
+      goTo({ path: `/search?q=${encodeURIComponent(query)}` });
+
       return ok(
         `Catalogue matches for "${query}":\n` +
           table(["catalog_id", "title", "author", "year"], rows) +
-          `\nPass a catalog_id to add_book.`,
+          `\nShowing these matches in catalogue search. Pass a catalog_id to add_book.`,
         results,
       );
     } catch {
@@ -125,7 +131,8 @@ const searchMyBooksTool: ToolDescriptor = {
     "optional; with none, it returns the whole library newest first. Returns " +
     "the book_id values that update_book and remove_book need. When the reader " +
     "asks what to read next, call get_taste_profile first, then list the tbr " +
-    "shelf with this.",
+    "shelf with this. When a named-book search identifies what the reader is " +
+    "discussing, follow it with navigate_to so that book is on screen.",
   inputSchema: {
     type: "object",
     properties: {
@@ -187,15 +194,28 @@ const searchMyBooksTool: ToolDescriptor = {
     // that is the shape of a "what next?" question, and nowhere else.
     const recommendHint =
       shelf === "tbr" && !text && !minRating
-        ? "\nUse a book_id with update_book or remove_book. If you are picking " +
-          "something to read, call get_taste_profile first if you have not already."
+        ? "\nIf you are picking something to read, call get_taste_profile first " +
+          "if you have not already. After choosing ONE book from these results, " +
+          'call navigate_to with {"view":"book","book_id":"…"} BEFORE ' +
+          "replying, so the reader can see the recommendation."
+        : "";
+
+    // A named-book lookup usually means the reader is talking about that book,
+    // even if there is nothing left to update. Surface the exact result rather
+    // than leaving them on whichever page happened to be open.
+    const discussionHint =
+      text && results.length === 1
+        ? `\nThe reader is discussing "${results[0].title}". Call navigate_to ` +
+          `with view=book and book_id="${results[0].id}" before replying, even ` +
+          "if its shelf or rating already matches what they said."
         : "";
 
     return ok(
       `${heading} (${total}):\n` +
         table(["book_id", "title", "author", "shelf", "rating"], rows) +
         footer +
-        recommendHint,
+        recommendHint +
+        discussionHint,
       results,
     );
   },
@@ -272,11 +292,14 @@ function renderTasteProfile(profile: TasteProfile): string {
    * WebMCP has no prompts or resources primitive — `provideContext` takes tools
    * and nothing else — so tool output is the only place to steer a multi-step
    * workflow without spending description budget on every call. This is the
-   * flagship journey: profile, then shelf, then one considered recommendation.
+   * flagship journey: profile, then shelf, then one considered recommendation
+   * shown on screen. The final navigation is a separate tool call because a
+   * recommendation must not silently change the reader's library.
    */
   lines.push(
-    "Next: call search_my_books with status=tbr, then recommend ONE book from " +
-      "that shelf and say briefly why it fits this profile.",
+    "Next: call search_my_books with status=tbr, choose ONE book from that " +
+      "shelf, then call navigate_to with view=book and its book_id BEFORE " +
+      "replying. Say briefly why it fits this profile.",
   );
 
   return lines.join("\n");
@@ -365,21 +388,25 @@ const addBookTool: ToolDescriptor = {
 
     if (duplicate) {
       recordToolCall("add_book", `${book.title} — already on shelf`);
+      // The add request still identifies the book being discussed. Bring it
+      // forward rather than treating a harmless duplicate as a dead end.
+      goTo({ path: `/book?id=${encodeURIComponent(book.id)}` });
       return ok(
-        `"${book.title}" is already on your ${book.shelf} shelf. No change made.`,
+        `"${book.title}" is already on your ${book.shelf} shelf. No change made; ` +
+          "showing its book page.",
         book,
       );
     }
 
     recordToolCall("add_book", `Added ${book.title}`);
     notify({ message: `Added “${book.title}” to ${book.shelf}.`, source: "agent" });
-    // The store already marked the new book touched — this just makes sure the
-    // reader is looking at the shelf when it pulses. A no-op if they already are.
-    goTo({ path: "/" });
+    // Bulk additions stay on the shelf, but navigate to the appropriate shelf
+    // and re-touch this card so the reader sees exactly what changed.
+    goTo({ path: "/", shelf, highlightIds: [book.id] });
 
     return ok(
       `Added "${book.title}" by ${book.author} to your ${shelf} shelf. ` +
-        `If you are working through several books, add the next one now.`,
+        `Showing it on that shelf. If you are working through several books, add the next one now.`,
       book,
     );
   },
@@ -396,7 +423,7 @@ const updateBookTool: ToolDescriptor = {
     "rating, or replace its note. Any field left out is unchanged. When the " +
     "reader says they finished a book or gave up on one, call search_my_books " +
     "to find its book_id, then set the shelf and the rating here in a single " +
-    "call.",
+    "call. A successful update automatically shows that book to the reader.",
   inputSchema: {
     type: "object",
     properties: {
@@ -454,9 +481,9 @@ const updateBookTool: ToolDescriptor = {
 
     recordToolCall("update_book", `${updated.title} — ${changes.join(", ")}`);
     notify({ message: `“${updated.title}” ${changes.join(", ")}.`, source: "agent" });
-    goTo({ path: "/" });
+    goTo({ path: `/book?id=${encodeURIComponent(updated.id)}` });
 
-    return ok(`"${updated.title}": ${changes.join(", ")}.`, updated);
+    return ok(`"${updated.title}": ${changes.join(", ")}. Showing its book page.`, updated);
   },
 };
 
@@ -680,9 +707,9 @@ const navigateTool: ToolDescriptor = {
   name: "navigate_to",
   description:
     "Change what the reader is looking at — this never changes their data. " +
-    "Use it to show a book you just found or discussed, e.g. after " +
-    "search_catalog or search_my_books, so the reader sees it rather than " +
-    'only hearing about it. view="book" opens one book (book_id or ' +
+    "When a specific book is recommended or discussed, call this as your FINAL " +
+    "tool call before replying, using view=book and that book_id, so the reader " +
+    'sees it rather than only hearing about it. view="book" opens one book (book_id or ' +
     'catalog_id); "shelf" shows the library, optionally filtered and ' +
     'highlighting a book_id; "taste" opens the reading profile; "search" ' +
     "opens catalogue search, optionally pre-filled with query.",

@@ -400,8 +400,9 @@ The stronger channel, because it costs no description budget and arrives exactly
 when it is relevant. `get_taste_profile` ends with:
 
 ```
-Next: call search_my_books with status=tbr, then recommend ONE book from that
-shelf and say briefly why it fits this profile.
+Next: call search_my_books with status=tbr, choose ONE book from that shelf,
+then call `navigate_to` with `view: "book"` and its `book_id` before replying.
+Say briefly why it fits this profile.
 ```
 
 That is the whole flagship journey, handed over at the only moment the agent is
@@ -410,7 +411,24 @@ guaranteed to be paying attention to it.
 Guidance is **conditional**, not blanket. `search_my_books` appends a
 recommendation hint only when listing the *whole* `tbr` shelf — the shape of a
 "what next?" question — and stays silent on a filtered search, which is usually
-part of some other task. Unconditional advice trains an agent to ignore it.
+part of some other task. The handoff explicitly makes `navigate_to` the final
+tool call before the response, so a recommendation leaves the reader looking at
+the chosen book instead of merely naming it. Unconditional advice trains an
+agent to ignore it.
+
+The same principle applies to a book the reader names directly. A one-result
+`search_my_books` response instructs the agent to navigate to that book even if
+no state change is needed; successful `update_book` calls navigate there
+themselves. This makes the on-screen state follow the conversation rather than
+only showing mutations on a generic shelf.
+
+Tools choose the most useful destination rather than always returning to the
+same route: a catalogue search opens its query results for author, series, and
+multi-book discussions; an update opens the changed book; an added book opens
+its filtered shelf and highlights the new card; and removal or bulk import
+returns to the shelf because there is no single surviving book to inspect. The
+taste profile remains non-navigating because it is decision context, not a
+specific book or set of books to show.
 
 Costs measured: profile 606 → **732 chars**, tbr listing **451**. Both far
 inside the 1,500 budget.
