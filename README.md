@@ -13,8 +13,8 @@ Built for the [WebMCP Challenge](https://webmcp.devpost.com).
 ## Why WebMCP
 
 Reading lists accumulate faster than they are read, and "what should I read
-next?" is a question about taste. Answering it means weighing sixty books, their
-ratings, and the ones that were abandoned, all at once.
+next?" is a question about taste. Answering it means weighing eighty books,
+their ratings, and the ones that were abandoned, all at once.
 
 A general browser agent could scrape the page, but WebMCP tool output is capped
 at 1,500 characters. Eighty books with ratings do not fit, and paging through

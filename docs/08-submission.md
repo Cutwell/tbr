@@ -78,13 +78,13 @@ rather than describing it.
 > ### TBR — a reading list that agents can actually reason about
 >
 > **The problem.** Reading lists are where books go to die. Mine has twenty-four
-> books on it and I have read none of them this year, because "what should I read
-> next?" is a question about *taste* — and answering it means holding sixty books,
-> their ratings, and the ones I abandoned, all in my head at once.
+> books on it and I have read none of them this year, because "what should I
+> read next?" is a question about *taste* — and answering it means holding
+> eighty books, their ratings, and the ones I abandoned, all in my head at once.
 >
 > **Why WebMCP.** A general browser agent could scrape my list, but it would be
 > reading a rendered page one screenful at a time, and WebMCP tool output is
-> capped at 1,500 characters. Sixty books with ratings do not fit, and paging
+> capped at 1,500 characters. Eighty books with ratings do not fit, and paging
 > through them burns the agent's context on data it should never have had to
 > parse.
 >
@@ -107,7 +107,7 @@ rather than describing it.
 > the screen follows the conversation and the reader ends up looking at the book
 > being discussed.
 >
-> **Implementation.** Eight imperative tools registered on the top-level page.
+> **Implementation.** Seven imperative tools registered on the top-level page.
 > Read tools carry `readOnlyHint`; `search_catalog` carries
 > `untrustedContentHint`, because Open Library is a public wiki and any record
 > could carry an injected instruction into the agent's context. Tools return
