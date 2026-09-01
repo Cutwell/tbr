@@ -40,7 +40,6 @@ const TOOL_BLURBS: Record<string, string> = {
   add_book: "Add a book to your list.",
   update_book: "Change a shelf or rating.",
   remove_book: "Remove a book — asks first.",
-  import_books: "Bulk-import a Goodreads CSV.",
   navigate_to: "Show you something on screen.",
 };
 

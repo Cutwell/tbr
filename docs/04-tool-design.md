@@ -1,12 +1,12 @@
 # 04 — WebMCP Tool Design
 
-The toolset comprises eight tools, each mapped to a journey in
+The toolset comprises seven tools, each mapped to a journey in
 [03-product-spec.md](03-product-spec.md).
 
 Chrome's guidance is deliberately non-prescriptive about tool count, directing
-designers to work from user goals rather than a target number. Eight is
+designers to work from user goals rather than a target number. Seven is
 defensible on that basis. Tool-selection accuracy degrades beyond roughly ten,
-which places this near the practical ceiling.
+which leaves headroom rather than crowding the ceiling.
 
 | # | Tool | Mutates | Annotations | Journey |
 |---|---|---|---|---|
@@ -16,8 +16,13 @@ which places this near the practical ceiling.
 | 4 | `add_book` | yes | — | A2, A3, J1 |
 | 5 | `update_book` | yes | — | J2, J5 |
 | 6 | `remove_book` | destructive | `destructiveHint`, `requestUserInteraction` | J4 |
-| 7 | `import_books` | yes, in bulk | — | J6 |
-| 8 | `navigate_to` | view only | `readOnlyHint` | A1, A2, A3 |
+| 7 | `navigate_to` | view only | `readOnlyHint` | A1, A2, A3 |
+
+An eighth, `import_books`, was built and then withdrawn after a host security
+review rejected the call. J6 is served by the UI paste field alone and is
+unaffected. The diagnosis is [07-risks.md](07-risks.md) R11; the reasoning it
+produced about annotation defaults applies to tools 4 and 5 and is recorded
+under [Annotation defaults](#annotation-defaults) below.
 
 The implementation is [`src/lib/webmcp/tools.ts`](../src/lib/webmcp/tools.ts).
 All names are 30 characters or fewer. `auditToolDescriptors()` asserts every
@@ -275,23 +280,7 @@ agent receives the decision.
 
 ---
 
-## 7. `import_books`
-
-Accepts Goodreads-style CSV text and maps its shelves: `to-read` to `tbr`,
-`read` to `read`, and anything else to `tbr`. The parser is shared with the
-paste field in the UI, giving one CSV implementation rather than two.
-
-The output budget is most binding here, since a 200-book import cannot enumerate
-its results. The tool returns a summary.
-
-```
-Imported 143 books: 98 to TBR, 45 to read. Skipped 7 duplicates and 2 rows with
-no title.
-```
-
----
-
-## 8. `navigate_to`
+## 7. `navigate_to`
 
 Changes the current view and nothing else. `view` accepts `shelf`, `book`,
 `taste` or `search`, with an optional `book_id`, shelf filter, or pre-filled
@@ -312,7 +301,7 @@ Destination varies by originating tool rather than defaulting to a single route.
 | `search_my_books` with one match | That book |
 | `add_book` | The book's shelf, with the new card highlighted |
 | `update_book` | The changed book |
-| `remove_book`, `import_books` | The shelf, as no single surviving book applies |
+| `remove_book` | The shelf, as no single surviving book applies |
 | `get_taste_profile` | Nothing; the profile is decision context rather than a target |
 
 ---
@@ -389,8 +378,8 @@ edit becomes an instruction to the agent.
 
 **Registration occurs once and is never repeated.** `provideContext` replaces the
 whole toolset while `registerTool` is additive, so a state-dependent toolset
-would need to be correct under both semantics. Exposing `import_books` only on
-the import screen would provide no benefit and introduce a class of bug.
+would need to be correct under both semantics. Exposing a tool only on the
+screen it relates to would provide no benefit and introduce a class of bug.
 
 **Every error names the next tool to call.** Chrome's guidance is that responses
 should act as a guide rather than a dead end, and should never return generic
@@ -401,3 +390,31 @@ per description, 150 per parameter, and 1,500 per output.
 `auditToolDescriptors()` checks the first two at start-up. `withinBudget()`
 enforces the third, truncating at a row boundary with an explicit marker,
 because a table cut mid-row misparses more readily than a short one.
+
+---
+
+## Annotation defaults
+
+The `—` against `add_book` and `update_book` in the table above is not neutral,
+and this was learned the expensive way when the host security review rejected
+`import_books` ([07-risks.md](07-risks.md), R11).
+
+An omitted annotation is not read as "unspecified". MCP defines defaults, and
+they are pessimistic by design:
+
+| Hint | Default when omitted |
+|---|---|
+| `readOnlyHint` | `false` |
+| `destructiveHint` | `true`, for any tool not marked read-only |
+| `idempotentHint` | `false` |
+| `openWorldHint` | `true` |
+
+So an unannotated mutating tool presents to a host as destructive,
+non-idempotent and open-world — a worse profile than `remove_book`, which
+actually destroys data but declares its intent and pairs it with a
+confirmation. Silence is the loudest possible claim.
+
+`add_book` and `update_book` are additive and corrective respectively; neither
+destroys anything, and `update_book` is genuinely idempotent. Both should say
+so rather than inheriting the opposite by omission. This is outstanding work,
+tracked in [06-roadmap.md](06-roadmap.md).

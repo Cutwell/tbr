@@ -91,7 +91,7 @@ misparse, which is worse than a table that is visibly short.
 Registration runs once at start-up, after the store has hydrated. The reverse
 order permits an early tool call to read an empty store.
 
-All eight tools register together and are never re-registered
+All seven tools register together and are never re-registered
 ([04-tool-design.md](04-tool-design.md)). Where no host is available, the agent
 indicator reports "unsupported" and links to setup instructions. Judges are
 likely to open the URL in an ordinary browser first, and an explicit unsupported
@@ -278,5 +278,5 @@ loading covers directly a requirement rather than a preference.
 - [x] `openlibrary.org` and `covers.openlibrary.org` reachable from the browser;
       both send CORS `*`, and Vercel sets no CSP by default
 - [ ] Deployed URL opened in the ChatGPT browser on a cold profile, on a machine
-      that has never run the dev server, with the indicator reading "8 tools
+      that has never run the dev server, with the indicator reading "7 tools
       live"

@@ -18,6 +18,14 @@ export type Shelf = (typeof SHELVES)[number];
 
 export type Rating = 1 | 2 | 3 | 4 | 5;
 
+export const RATINGS = [1, 2, 3, 4, 5] as const;
+
+/** Narrows a loose number — a parsed CSV cell, a model's tool argument — to a
+ *  `Rating`, or `undefined` when it is out of range. Never throws. */
+export function asRating(value: number | undefined): Rating | undefined {
+  return RATINGS.find((rating) => rating === value);
+}
+
 export interface Book {
   id: string;
   title: string;

@@ -23,7 +23,7 @@ in a single call, rather than exposing rows for the agent to page through.
 | [01-hackathon-brief.md](01-hackathon-brief.md) | Deadline, prizes, judging criteria, submission requirements |
 | [02-webmcp-reference.md](02-webmcp-reference.md) | Verified API surface, the namespace divergence, hard limits |
 | [03-product-spec.md](03-product-spec.md) | User journeys, data model, screens |
-| [04-tool-design.md](04-tool-design.md) | The eight tools: schemas, output budgets, security hints |
+| [04-tool-design.md](04-tool-design.md) | The seven tools: schemas, output budgets, security hints |
 | [05-architecture.md](05-architecture.md) | Stack, catalogue, storage, performance, deployment |
 | [06-roadmap.md](06-roadmap.md) | The five-day plan and its status |
 | [07-risks.md](07-risks.md) | Risk register and mitigations |

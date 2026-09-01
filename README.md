@@ -35,7 +35,7 @@ data and can pre-compute the exact summary an agent needs.
 
 ## The tools
 
-Eight, registered on the top-level page. The rationale is in
+Seven, registered on the top-level page. The rationale is in
 [docs/04-tool-design.md](docs/04-tool-design.md); the implementation is
 [src/lib/webmcp/tools.ts](src/lib/webmcp/tools.ts).
 
@@ -47,10 +47,16 @@ Eight, registered on the top-level page. The rationale is in
 | `add_book` | yes | — |
 | `update_book` | yes | — |
 | `remove_book` | destructive | `destructiveHint` + `requestUserInteraction` |
-| `import_books` | yes | — |
 | `navigate_to` | view only | `readOnlyHint` |
 
-Four properties of the set are worth stating explicitly.
+An eighth tool, `import_books`, was built and then withdrawn: a host security
+review rejected the call, and the reasons were structural — an unbounded CSV
+payload written in bulk with no confirmation step — rather than anything a
+reworded schema would fix. Goodreads import is unaffected, because it was always
+a first-class UI path rather than an agent-only capability. The full diagnosis is
+[docs/07-risks.md](docs/07-risks.md), R11.
+
+Five properties of the set are worth stating explicitly.
 
 - **`untrustedContentHint` on `search_catalog` reflects a real property of the
   data.** Open Library is a public wiki: any record is editable by anyone, and
@@ -65,6 +71,9 @@ Four properties of the set are worth stating explicitly.
   viewing the book rather than only hearing its name.
 - **Every error names the next tool to call**, following Chrome's guidance that a
   failed call should act as a guide rather than a dead end.
+- **The `—` on `add_book` and `update_book` is a known gap, not a decision.** MCP
+  defaults an unannotated mutating tool to `destructiveHint: true`, so silence
+  claims more than either tool does. Correcting it is outstanding work.
 
 ## Running locally
 

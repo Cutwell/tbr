@@ -18,7 +18,7 @@ vars:
   # bundle, which catches a tool silently dropped from the array in tools.ts.
   TOOL_NAMES: >-
     search_catalog search_my_books get_taste_profile add_book
-    update_book remove_book import_books navigate_to
+    update_book remove_book navigate_to
 
 tasks:
   default:
@@ -65,7 +65,7 @@ tasks:
   # --- pre-flight verification -----------------------------------------
 
   verify:tools:
-    desc: Assert all eight WebMCP tool names survive into the built bundle
+    desc: Assert all seven WebMCP tool names survive into the built bundle
     silent: true
     preconditions:
       - sh: test -d {{.OUT_DIR}}
@@ -85,7 +85,7 @@ tasks:
           echo "$missing tool(s) absent from the bundle. Check the exported array in src/lib/webmcp/tools.ts."
           exit 1
         fi
-        echo "All 8 tools present in {{.OUT_DIR}}/."
+        echo "All 7 tools present in {{.OUT_DIR}}/."
 
   verify:live:
     desc: Check the deployed URL is reachable over HTTPS with no login wall

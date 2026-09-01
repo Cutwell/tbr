@@ -55,7 +55,10 @@ the result is presentable.
       `add_book`, `update_book`
 - [x] `profile.ts`: the aggregation and the heuristic Signal line
 - [x] `remove_book`, with `requestUserInteraction` and a direct-dialog fallback
-- [x] `import_books`, sharing its parser with the UI paste field
+- [x] ~~`import_books`, sharing its parser with the UI paste field~~ — built,
+      then withdrawn on Day 4 after a host security review rejected the call
+      ([07-risks.md](07-risks.md), R11). The parser survives as
+      `store/goodreads.ts`, serving the UI paste field.
 - [x] `AgentIndicator`: connection status and a live tool-call log
 - [x] `auditToolDescriptors()`: start-up assertions on the character budgets
 - [x] `window.__tbrTools` development harness, for calling tools without an agent
@@ -105,8 +108,8 @@ exists:
 
 - The full human application: four routes, light and dark, responsive, with an
   80-book library
-- All eight WebMCP tools. The first seven are verified live in the ChatGPT
-  browser; `navigate_to` postdates that pass and awaits confirmation there
+- Seven WebMCP tools. The first six are verified live in the ChatGPT browser;
+  `navigate_to` postdates that pass and awaits confirmation there
 - Agent steering across all three channels
   ([04-tool-design.md](04-tool-design.md))
 - A static export deployed to Vercel, with the live URL in the
@@ -118,8 +121,13 @@ Outstanding work, in priority order:
 1. **The demo video.** Not started, and the largest remaining task. It is
    mandatory and therefore on the critical path.
 2. **Cold-profile verification** of the live URL in ChatGPT's browser, covering
-   the indicator reading "8 tools live" and a walkthrough of A1, A2 and A3.
+   the indicator reading "7 tools live" and a walkthrough of A1, A2 and A3.
 3. **Devpost submission**: text, screenshots, links, filed Wednesday.
+4. **Annotate `add_book` and `update_book`.** Both currently declare nothing and
+   therefore inherit `destructiveHint: true`, which is what the `import_books`
+   rejection made legible ([04-tool-design.md](04-tool-design.md), Annotation
+   defaults). Neither destroys anything; both should say so. Small, and it
+   reduces the chance of a second security-review rejection on camera.
 
 Accepted gaps:
 
@@ -133,10 +141,12 @@ Accepted gaps:
 
 ## Cut list
 
-Agreed in advance and cut from the top as days slip. Nothing has been cut.
+Agreed in advance and cut from the top as days slip. Item 1 has been cut —
+forced by the host rather than by the schedule, but it is the same cut, and it
+landed exactly as the list predicted: the journey still demonstrates.
 
-1. `import_books` as a tool, reduced to the UI paste field; the journey still
-   demonstrates
+1. ~~`import_books` as a tool, reduced to the UI paste field; the journey still
+   demonstrates~~ — **cut on Day 4** ([07-risks.md](07-risks.md), R11)
 2. Goodreads import entirely, dropping J6 as the weakest of the six
 3. The `note` field, removing a parameter from two schemas
 4. Era analysis in the taste profile, retaining authors and ratings only

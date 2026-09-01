@@ -3,7 +3,7 @@ import { requestConfirmation } from "@/lib/store/confirmations";
 import { goTo } from "@/lib/store/navigation";
 import { notify } from "@/lib/store/notifications";
 import { library } from "@/lib/store/store";
-import { SHELVES, type Rating, type Shelf, type TasteProfile } from "@/lib/types";
+import { asRating, SHELVES, type Shelf, type TasteProfile } from "@/lib/types";
 import type { AgentHandle, ToolArgs, ToolDescriptor, ToolResponse } from "@/lib/webmcp/adapter";
 import { err, ok, table } from "@/lib/webmcp/format";
 import { readClampedInt, readEnum, readInt, readString } from "@/lib/webmcp/input";
@@ -12,25 +12,24 @@ import { recordToolCall } from "@/lib/webmcp/activity";
 /**
  * The TBR toolset.
  *
- * Eight tools, each mapped to a user journey in docs/03-product-spec.md. Every
+ * Seven tools, each mapped to a user journey in docs/03-product-spec.md. Every
  * one of them goes through the library store — never localStorage, never React
  * state — so an agent's writes re-render the UI exactly as a person's do. That
  * is the whole reason the changes are visible on screen as they happen.
  *
- * The four that mutate the shelf (`add_book`, `update_book`, `remove_book`,
- * `import_books`) also call `goTo` so the reader is looking at the shelf when
- * it happens, not just told about it in the agent's reply. `navigate_to` is the
- * complementary tool for when the agent wants to point at something without
- * changing it — a search result, a book worth a second look.
+ * The three that mutate the shelf (`add_book`, `update_book`, `remove_book`)
+ * also call `goTo` so the reader is looking at the shelf when it happens, not
+ * just told about it in the agent's reply. `navigate_to` is the complementary
+ * tool for when the agent wants to point at something without changing it — a
+ * search result, a book worth a second look.
+ *
+ * Bulk CSV import was an eighth tool and is not one any more: a host security
+ * review rejected it, for reasons that survive any rewording of the schema.
+ * The journey it served is unaffected, because it always had a first-class UI
+ * path — see `store/goodreads.ts`, `ImportPanel`, and docs/07-risks.md (R11).
  *
  * Schemas, budgets and rationale: docs/04-tool-design.md.
  */
-
-const RATINGS = [1, 2, 3, 4, 5] as const;
-
-function asRating(value: number | undefined): Rating | undefined {
-  return RATINGS.find((rating) => rating === value);
-}
 
 function shelfSummary(): string {
   const counts = library.counts();
@@ -579,140 +578,7 @@ const removeBookTool: ToolDescriptor = {
 };
 
 // ---------------------------------------------------------------------------
-// 7. import_books
-// ---------------------------------------------------------------------------
-
-/** Minimal CSV reader: handles quoted fields and embedded commas, nothing more. */
-function parseCsvRow(line: string): string[] {
-  const cells: string[] = [];
-  let cell = "";
-  let quoted = false;
-
-  for (let i = 0; i < line.length; i += 1) {
-    const char = line[i];
-    if (quoted) {
-      if (char === '"' && line[i + 1] === '"') {
-        cell += '"';
-        i += 1;
-      } else if (char === '"') {
-        quoted = false;
-      } else {
-        cell += char;
-      }
-    } else if (char === '"') {
-      quoted = true;
-    } else if (char === ",") {
-      cells.push(cell);
-      cell = "";
-    } else {
-      cell += char;
-    }
-  }
-
-  cells.push(cell);
-  return cells.map((value) => value.trim());
-}
-
-const GOODREADS_SHELF: Record<string, Shelf> = {
-  "to-read": "tbr",
-  read: "read",
-  "currently-reading": "tbr",
-  abandoned: "dnf",
-  "did-not-finish": "dnf",
-  dnf: "dnf",
-};
-
-export interface ImportOutcome {
-  added: number;
-  duplicates: number;
-  skipped: number;
-}
-
-/** Shared by the tool and the paste-a-CSV panel, so both behave identically. */
-export function importGoodreadsCsv(csv: string): ImportOutcome {
-  const lines = csv.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  if (lines.length < 2) return { added: 0, duplicates: 0, skipped: 0 };
-
-  const headers = parseCsvRow(lines[0]).map((header) => header.toLowerCase());
-  const titleAt = headers.findIndex((header) => header.includes("title"));
-  const authorAt = headers.findIndex((header) => header === "author" || header.includes("author"));
-  const shelfAt = headers.findIndex((header) => header.includes("shelf"));
-  const ratingAt = headers.findIndex((header) => header.includes("my rating"));
-
-  if (titleAt === -1) return { added: 0, duplicates: 0, skipped: lines.length - 1 };
-
-  let skipped = 0;
-  const candidates = [];
-
-  for (const line of lines.slice(1)) {
-    const cells = parseCsvRow(line);
-    const title = cells[titleAt];
-    if (!title) {
-      skipped += 1;
-      continue;
-    }
-
-    const rawShelf = shelfAt === -1 ? "" : cells[shelfAt]?.toLowerCase();
-    const rating = ratingAt === -1 ? undefined : asRating(Number.parseInt(cells[ratingAt], 10));
-
-    candidates.push({
-      title,
-      author: (authorAt === -1 ? "" : cells[authorAt]) || "Unknown",
-      shelf: GOODREADS_SHELF[rawShelf] ?? "tbr",
-      rating,
-    });
-  }
-
-  const { added, duplicates } = library.addMany(candidates);
-  return { added, duplicates, skipped };
-}
-
-const importBooksTool: ToolDescriptor = {
-  name: "import_books",
-  description:
-    "Bulk-import a reading list from Goodreads-style CSV text. Reads the " +
-    "Title, Author, Exclusive Shelf and My Rating columns and ignores the " +
-    "rest. Returns a summary only, never the full list. Existing books are " +
-    "skipped rather than duplicated.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      csv: {
-        type: "string",
-        description: "CSV text including a header row with at least a Title column.",
-      },
-    },
-    required: ["csv"],
-    additionalProperties: false,
-  },
-  execute: (args) => {
-    const csv = readString(args, "csv");
-    if (!csv) return err("CSV text is required.", "Include a header row with a Title column.");
-
-    const { added, duplicates, skipped } = importGoodreadsCsv(csv);
-
-    if (added === 0 && duplicates === 0) {
-      return err(
-        "Nothing could be imported.",
-        "Check the CSV has a header row with a Title column.",
-      );
-    }
-
-    recordToolCall("import_books", `Imported ${added} books`);
-    notify({ message: `Imported ${added} books.`, source: "agent" });
-    goTo({ path: "/" });
-
-    // A 200-book import cannot list what it imported — summarise, always.
-    return ok(
-      `Imported ${added} books. Skipped ${duplicates} already on your list` +
-        `${skipped > 0 ? ` and ${skipped} rows with no title` : ""}. ` +
-        `Your library now holds ${shelfSummary()}.`,
-    );
-  },
-};
-
-// ---------------------------------------------------------------------------
-// 8. navigate_to
+// 7. navigate_to
 // ---------------------------------------------------------------------------
 
 const NAV_VIEWS = ["shelf", "book", "taste", "search"] as const;
@@ -828,7 +694,7 @@ const navigateTool: ToolDescriptor = {
  * tools get the same treatment as writes.
  */
 function withActivityLog(tool: ToolDescriptor): ToolDescriptor {
-  const alreadyLogs = new Set(["add_book", "update_book", "remove_book", "import_books"]);
+  const alreadyLogs = new Set(["add_book", "update_book", "remove_book"]);
 
   return {
     ...tool,
@@ -850,6 +716,5 @@ export const tools: ToolDescriptor[] = [
   addBookTool,
   updateBookTool,
   removeBookTool,
-  importBooksTool,
   navigateTool,
 ].map(withActivityLog);

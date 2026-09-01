@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import { Icon } from "@/components/atoms/Icon";
+import { importGoodreadsCsv } from "@/lib/store/goodreads";
 import { notify } from "@/lib/store/notifications";
-import { importGoodreadsCsv } from "@/lib/webmcp/tools";
 
 const SAMPLE = `Title,Author,Exclusive Shelf,My Rating
 The Wall,Marlen Haushofer,to-read,0
@@ -15,8 +15,12 @@ Stoner,John Williams,read,5`;
  *
  * A paste box rather than file upload with column mapping. Goodreads exports
  * CSV, readers can paste it, and the full upload flow would cost half a day for
- * a journey that is a single step. It shares `importGoodreadsCsv` with the
- * `import_books` tool, so a person and an agent get identical behaviour.
+ * a journey that is a single step.
+ *
+ * This is the only import path. There was an `import_books` tool alongside it
+ * until a host security review rejected the call (docs/07-risks.md, R11); the
+ * journey was never dependent on it, which is why dropping the tool cost
+ * nothing here.
  */
 export function ImportPanel({ onDone }: { onDone: () => void }) {
   const [csv, setCsv] = useState("");
@@ -65,9 +69,6 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
           <Icon name="upload" size={15} />
           Import
         </Button>
-        <p className="u-meta text-ink-faint">
-          Your agent can do this too — <span className="text-ink-soft">import_books</span>
-        </p>
       </div>
     </section>
   );

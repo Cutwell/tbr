@@ -59,7 +59,7 @@ rather than describing it.
 **2:20–2:45 · Close.** Pan across the shelf, with one line on security.
 
 > "Catalogue results are flagged as untrusted content — Open Library is a public
-> wiki, so any record could carry an injection. Eight tools, no backend, MIT
+> wiki, so any record could carry an injection. Seven tools, no backend, MIT
 > licensed."
 
 ### Production notes
@@ -144,7 +144,7 @@ against a length limit.
       hand
 - [ ] Tested on a machine that has never run the dev server
 - [ ] Tested with empty `localStorage`, confirming the seed library appears
-- [ ] Tested in ChatGPT's in-app browser, confirming all eight tools under Site
+- [ ] Tested in ChatGPT’s in-app browser, confirming all seven tools under Site
       tools
 - [ ] Tested in Chrome with `chrome://flags/#enable-webmcp-testing`
 
