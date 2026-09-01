@@ -1,8 +1,9 @@
 # 02 — WebMCP Reference
 
-Verified against primary sources on 29 August 2026. WebMCP is a moving target —
-the spec changed shape between the August 2025 proposal and the shipping
-implementations — so **do not trust blog posts**, including recent ones.
+Verified against primary sources on 29 August 2026. WebMCP is a moving target:
+the specification changed shape between the August 2025 proposal and the
+shipping implementations, so secondary sources are unreliable regardless of
+publication date.
 
 - Chrome: <https://developer.chrome.com/docs/ai/webmcp>
 - ChatGPT site tools: <https://learn.chatgpt.com/docs/webmcp>
@@ -10,24 +11,24 @@ implementations — so **do not trust blog posts**, including recent ones.
 
 ## The namespace divergence
 
-The single biggest technical risk in the project. Three sources, two API
-surfaces:
+The largest technical risk in the project. Three sources describe two API
+surfaces.
 
 | Source | Namespace | Method |
 |---|---|---|
-| **ChatGPT site tools** — our judging surface | `document.modelContext` | `registerTool()` |
-| **Chrome** — imperative API | `document.modelContext` | `registerTool()` |
-| **W3C proposal** — Aug 2025 | `navigator.modelContext` | `provideContext({tools})` |
+| ChatGPT site tools (the judging surface) | `document.modelContext` | `registerTool()` |
+| Chrome, imperative API | `document.modelContext` | `registerTool()` |
+| W3C proposal, August 2025 | `navigator.modelContext` | `provideContext({tools})` |
 
-Registering against the wrong one produces an app with no tools and no error
-message. Both shipping implementations document
-`document.modelContext.registerTool()`, but being wrong is not survivable.
+Registering against the wrong namespace produces an app with no tools and no
+error message. Both shipping implementations document
+`document.modelContext.registerTool()`, but the cost of being wrong is total
+failure of the agent features.
 
 **Decision: a registration adapter** that feature-detects and registers against
-whatever the host exposes, both namespaces and both methods. It is a small
-amount of code and it removes the entire "judge opens it and sees nothing"
-failure class. Shipped as
-[`src/lib/webmcp/adapter.ts`](../src/lib/webmcp/adapter.ts):
+whatever the host exposes, covering both namespaces and both methods. It is a
+small amount of code and it eliminates the entire failure class. The
+implementation is [`src/lib/webmcp/adapter.ts`](../src/lib/webmcp/adapter.ts).
 
 ```js
 const host = document.modelContext ?? navigator.modelContext ?? null;
@@ -39,18 +40,19 @@ if (typeof host.registerTool === "function") {
 }
 ```
 
-Note the semantic difference the adapter papers over: `registerTool` is
-**additive**, `provideContext` **replaces the entire toolset**. Any code that
-re-registers on state change has to be correct under both, which is a large part
-of why TBR registers once and never re-registers ([04](04-tool-design.md)).
+The two methods differ semantically. `registerTool` is additive;
+`provideContext` replaces the entire toolset on each call. Any code that
+re-registers on state change must be correct under both, which is part of the
+rationale for registering once and never re-registering
+([04-tool-design.md](04-tool-design.md)).
 
-The adapter also initialises [`@mcp-b/webmcp-polyfill`](https://www.npmjs.com/package/@mcp-b/webmcp-polyfill)
-when no native host is present, so tools are locally callable in a plain
-browser. It cannot make an unrelated agent discover the page across a document
-boundary — the polyfill's own README is explicit about that — so registration
-reports whether the host it found was the polyfill, and the UI says
-"registered" rather than "connected" in that case. Claiming a connection that
-does not exist is worse than admitting there isn't one.
+The adapter also initialises
+[`@mcp-b/webmcp-polyfill`](https://www.npmjs.com/package/@mcp-b/webmcp-polyfill)
+when no native host is present, making tools locally callable in an ordinary
+browser. The polyfill cannot make an unrelated agent discover the page across a
+document boundary, a limitation its own documentation states explicitly.
+Registration therefore reports whether the host it found was the polyfill, and
+the UI distinguishes "registered" from "connected" accordingly.
 
 ## Tool descriptor shape
 
@@ -66,108 +68,114 @@ await document.modelContext.registerTool({
       query:  { type: "string", description: "Title or author substring." },
     },
     required: [],
-    additionalProperties: false,   // ChatGPT's docs show this; include it
+    additionalProperties: false,   // present in ChatGPT's documented examples
   },
   annotations: { readOnlyHint: true },
   execute: async (args, agent) => { /* … */ },
 }, {
   exposedTo: ["https://chatgpt.com"],  // optional origin allowlist
-  signal: controller.signal,           // abort ⇒ unregisters the tool
+  signal: controller.signal,           // abort unregisters the tool
 });
 ```
 
-**Return value.** The proposal specifies MCP-style content blocks; ChatGPT's own
-example returns a bare object. Returning the content-block form is the safer
-bet — it is the spec shape, and hosts that accept plain objects generally accept
-it too. One helper, one place to change it:
+### Return value
+
+The proposal specifies MCP-style content blocks. ChatGPT's published example
+returns a bare object. The content-block form is the safer choice: it matches
+the specification, and hosts that accept plain objects generally accept it as
+well. A single helper keeps the decision in one place.
 
 ```js
 const ok  = (text, data) => ({ content: [{ type: "text", text }], structuredContent: data });
 const err = (text)       => ({ content: [{ type: "text", text }], isError: true });
 ```
 
-**Human-in-the-loop.** `agent.requestUserInteraction()` lets a tool block on real
-consent mid-execution. It is the highest-signal feature available for the
-"humans and agents working together" criterion, and `remove_book` uses it.
+### Human-in-the-loop
 
-Signature caution: Chrome's docs destructure the second parameter as
-`{ signal }`; the proposal calls it `agent`. Treat it as an opaque object and
-read both properties off it defensively.
+`agent.requestUserInteraction()` allows a tool to block on user consent during
+execution. It is the strongest available signal for the "humans and agents
+working together" criterion, and `remove_book` uses it.
+
+The signature is documented inconsistently: Chrome destructures the second
+parameter as `{ signal }`, while the proposal names it `agent`. Treating it as
+an opaque object and reading both properties defensively covers both.
 
 ## Hard limits
 
-Chrome describes these as recommendations that "may become formal API
-requirements". Treat them as hard limits.
+Chrome describes the following as recommendations that "may become formal API
+requirements". They are treated here as hard limits.
 
-| Thing | Budget |
+| Constraint | Budget |
 |---|---|
 | Tool name | 30 characters |
 | Tool description | 500 characters |
 | Parameter description | 150 characters |
-| **Tool output** | **1,500 characters** |
+| Tool output | 1,500 characters |
 
-**The 1,500-character output cap is the defining constraint of this project.**
-For calibration: a raw Open Library search response for *two* books is 2,838
-bytes, mostly a 100-element ISBN array. Naive pass-through blows the budget on
-the first call. Field projection and result caps are correctness, not
-optimisation — see [04](04-tool-design.md).
+The output cap is the defining constraint of the project. For calibration, a raw
+Open Library search response for two books is 2,838 bytes, most of it a
+100-element ISBN array. Naive pass-through exceeds the budget on the first call,
+which makes field projection and result caps a correctness requirement rather
+than an optimisation. See [04-tool-design.md](04-tool-design.md).
 
 ## Security annotations
 
-| Annotation | Meaning | Used on |
+| Annotation | Meaning | Applied to |
 |---|---|---|
-| `readOnlyHint` | Does not mutate; the agent may call freely | Every search, profile and navigation tool |
+| `readOnlyHint` | Does not mutate state; the agent may call it freely | All search, profile and navigation tools |
 | `destructiveHint` | Destroys data | `remove_book` |
 | `untrustedContentHint` | Payload is externally sourced and may carry injected instructions | `search_catalog` |
-| `exposedTo` | Restrict which origins may call | Not used; the default is right for a public demo |
+| `exposedTo` | Restricts calling origins | Unused; the default suits a public demo |
 
-`untrustedContentHint` on `search_catalog` is a real call, not box-ticking.
-Anyone can edit an Open Library record, so a title field is attacker-controlled
-input that lands verbatim in the agent's context.
+`untrustedContentHint` on `search_catalog` reflects a real property of the data
+rather than a formality. Open Library records are editable by anyone, so a title
+field is attacker-controlled input that reaches the agent's context verbatim.
 
 ## Platform constraints
 
-From ChatGPT's site-tools docs:
+From ChatGPT's site-tools documentation:
 
-- **No declarative HTML form annotations.** Chrome documents them; ChatGPT does
-  not support them. Use the imperative API only.
-- **Tools inside iframes are not discovered.** Register from the top-level page.
+- Declarative HTML form annotations are unsupported. Chrome documents them;
+  ChatGPT does not implement them. Only the imperative API is portable.
+- Tools inside iframes are not discovered. Registration must occur in
+  top-level page JavaScript.
 
 TBR registers from the app shell, which is top-level on every route.
 
-## Testing
+## Testing surfaces
 
-| Surface | How |
+| Surface | Procedure |
 |---|---|
-| Extension | [Model Context Tool Inspector](https://chromewebstore.google.com/detail/model-context-tool-inspec/gbpdfapgefenggkahomfgkhfehlcenpd) — invoke tools with no agent at all. Fastest loop; use it first. |
-| Chrome | `chrome://flags/#enable-webmcp-testing` → Enabled → relaunch. Chrome 146+ ships `modelContext`; origin trial from 149. |
-| ChatGPT desktop | Open the URL in the in-app browser, then **Site tools** in the address bar — lists available tools and recent calls. |
+| Extension | [Model Context Tool Inspector](https://chromewebstore.google.com/detail/model-context-tool-inspec/gbpdfapgefenggkahomfgkhfehlcenpd) invokes tools without an agent. The fastest development loop. |
+| Chrome | Set `chrome://flags/#enable-webmcp-testing` to Enabled and relaunch. Chrome 146+ ships `modelContext`; origin trial from 149. |
+| ChatGPT desktop | Open the URL in the in-app browser, then **Site tools** in the address bar, which lists available tools and recent calls. |
 
-## What remains unconfirmed
+## Unconfirmed behaviour
 
 The first seven tools were exercised live in ChatGPT's in-app browser:
-registered, listed under **Site tools**, callable, returning output the agent
-acted on. That closes the namespace risk (R1 in [07](07-risks.md)) against the
-real judging surface.
+registered, listed under **Site tools**, callable, and returning output the agent
+acted on. This closes the namespace risk (R1 in [07-risks.md](07-risks.md))
+against the real judging surface.
 
-`navigate_to` was added after that pass and has only been exercised through the
-dev harness and the Inspector. It registers through the same adapter and carries
-no host-specific behaviour, so the risk is low — but it should be confirmed on
-the live URL alongside the rehearsal ([06](06-roadmap.md)).
+`navigate_to` was added after that pass and has been exercised only through the
+development harness and the Inspector. It registers through the same adapter and
+carries no host-specific behaviour, so the residual risk is low, but it should
+be confirmed on the live URL during the rehearsal ([06-roadmap.md](06-roadmap.md)).
 
-Three lower-level questions were *not* individually instrumented during that
-pass, and the honest reason is that the code is defensive enough that both
-branches look identical from outside:
+Three lower-level questions were not individually instrumented. In each case the
+implementation is defensive enough that both branches behave identically from
+the outside, which is why the distinction was not observable.
 
-1. **Return shape** — whether ChatGPT requires `{content:[…]}` or accepts a bare
-   object. `format.ts` always emits the content-block form, so the two were
-   never distinguished.
-2. **`requestUserInteraction`** — whether it fired natively or whether
-   `remove_book` fell back to the app's own dialog.
-   `agent?.requestUserInteraction?.()` makes both paths behave the same.
-3. **Overrun behaviour** — never observed, because no tool exceeded the budget
-   in testing. The largest measured output was 732 characters.
+1. **Return shape.** Whether ChatGPT requires `{content:[…]}` or accepts a bare
+   object is unknown. `format.ts` always emits the content-block form, so the
+   two cases were never distinguished.
+2. **`requestUserInteraction`.** Whether it fired natively or whether
+   `remove_book` fell back to the app's own dialog is unknown, since the
+   implementation makes both paths equivalent externally. One property is
+   established: a host may expose the method and reject with "unsupported" on
+   call, as the Codex shim does, so presence is not a capability check.
+3. **Overrun behaviour.** Never observed, as no tool exceeded the budget during
+   testing. The largest measured output was 732 characters.
 
-Question 2 is the one that matters: the demo's human-in-the-loop beat should
-describe the path that actually runs. A console log in each branch settles it in
-a minute.
+Item 2 has practical consequences: the demo's human-in-the-loop segment should
+describe the path that actually executes. Logging in each branch resolves it.

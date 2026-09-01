@@ -1,143 +1,161 @@
 # 07 — Risk Register
 
-Ordered by expected damage. The top four could lose the submission outright.
+Ordered by expected damage. The first four are capable of losing the submission
+outright.
 
 ---
 
 ### R1 — Judges open the URL and see no tools
+
 **Impact: fatal · Status: closed**
 
-The `document.modelContext` vs `navigator.modelContext` divergence
-([02](02-webmcp-reference.md)) means registering against the wrong namespace
-produces an app with zero agent capability and no error message.
+The divergence between `document.modelContext` and `navigator.modelContext`
+([02-webmcp-reference.md](02-webmcp-reference.md)) means that registering
+against the wrong namespace yields an application with no agent capability and
+no error message.
 
-**Mitigation:** the adapter shim, supporting both namespaces and both
-registration styles, plus a visible ready/unsupported status in the header so
-the failure is loud rather than silent.
+**Mitigation.** The adapter shim supports both namespaces and both registration
+styles. A visible ready/unsupported status in the header makes the failure
+observable rather than silent.
 
-**Status:** the first seven tools registered and were callable live in ChatGPT's
-in-app browser. Chrome has not been separately re-checked, but it shares the
-code path. `navigate_to` was added afterwards and should be confirmed during the
-rehearsal, against the deployed URL rather than localhost.
-
----
-
-### R2 — Cold-start demo has no data
-**Impact: fatal to the headline journey · Status: closed**
-
-A judge with empty `localStorage` asks "what should I read next?" and
-`get_taste_profile` truthfully answers "not enough history". The flagship
-journey produces nothing for the one person who matters.
-
-**Mitigation:** 80 books seeded on first visit with deliberate taste signal
-([05](05-architecture.md)). Recovery is a documented `localStorage` deletion
-rather than a button — a control that wipes the reader's list does not belong in
-a reading list, and an accidental click on camera would be worse than the
-problem it solves.
+**Status.** The first seven tools registered and were callable live in ChatGPT's
+in-app browser. Chrome has not been separately re-checked but shares the code
+path. `navigate_to` postdates that verification and should be confirmed during
+the rehearsal, against the deployed URL rather than localhost.
 
 ---
 
-### R3 — The submission is incomplete at the deadline
-**Impact: fatal · Status: open — the video is the critical path**
+### R2 — Cold-start demonstration has no data
 
-Four mandatory artefacts. The two most commonly forgotten are the open-source
-licence file and the video being **public rather than unlisted**, and YouTube
-processing on a large upload can take longer than you have.
+**Impact: fatal to the primary journey · Status: closed**
 
-**Mitigation:** submit Wednesday, buffer Thursday ([06](06-roadmap.md)). The MIT
-licence landed on day one, not day five. Check the video in a private window.
+A judge with empty `localStorage` asking what to read next receives an accurate
+report of insufficient history from `get_taste_profile`. The primary journey
+produces nothing for the intended audience.
+
+**Mitigation.** 80 books seeded on first visit with deliberate taste signal
+([05-architecture.md](05-architecture.md)). Recovery is a documented
+`localStorage` deletion rather than a control, since a control that erases the
+reader's list does not belong in a reading list and invites accidental
+activation during recording.
+
+---
+
+### R3 — Submission incomplete at the deadline
+
+**Impact: fatal · Status: open; the video is the critical path**
+
+Four mandatory artefacts. The two most frequently omitted are the open-source
+licence file and the video's public rather than unlisted visibility. YouTube
+processing on a large upload can exceed the remaining time.
+
+**Mitigation.** Submit Wednesday and hold Thursday as buffer
+([06-roadmap.md](06-roadmap.md)). The MIT licence was added on the first day
+rather than the last. Video visibility is verified in a private window.
 
 ---
 
 ### R4 — Output budget overruns corrupt agent behaviour
-**Impact: severe · Status: mitigated, never observed**
 
-1,500 characters is easy to exceed — Open Library returns 2,838 bytes for two
-books. Overrun means truncation mid-row, a malformed table, and an agent that
-misreads the data without knowing it did.
+**Impact: severe · Status: mitigated; never observed**
 
-**Mitigation:** pipe-delimited rows instead of JSON, `limit` defaulting to 10,
-field projection at the API call, and a `budget()` guard that truncates at a row
-boundary with an explicit marker. Never truncate silently.
+The 1,500-character limit is easy to exceed, given that Open Library returns
+2,838 bytes for two books. An overrun causes truncation mid-row, a malformed
+table, and an agent that misreads the data without detecting the fault.
 
-**Status:** the largest measured output is 732 characters, less than half the
-budget, so the guard has never actually fired.
+**Mitigation.** Pipe-delimited rows rather than JSON, `limit` defaulting to 10,
+field projection at the API call, and a `budget()` guard truncating at a row
+boundary with an explicit marker.
 
----
-
-### R5 — `requestUserInteraction` is unsupported in ChatGPT's browser
-**Impact: moderate · Status: open, and unmeasured rather than unresolved**
-
-It appears in the W3C proposal and Chrome's docs; ChatGPT's site-tools page does
-not mention it. If unavailable, the human-in-the-loop beat does not run natively
-on the primary judging surface.
-
-**Mitigation:** code defensively — `agent?.requestUserInteraction?.()`, proceed
-on `undefined`, block only on an explicit `false` — so the tool never hard-fails.
-The fallback is the app's own dialog, which is the same one the reader's delete
-button opens.
-
-**Status:** `remove_book` worked end to end in the ChatGPT browser, but *which*
-branch ran was never logged, so this is unmeasured rather than closed. Confirm
-before recording: the video should describe the path that is actually live, not
-the one we would prefer. A console log in each branch settles it in a minute.
+**Status.** The largest measured output is 732 characters, under half the
+budget, so the guard has not fired in practice.
 
 ---
 
-### R6 — Open Library returns the wrong book on camera
+### R5 — `requestUserInteraction` unsupported in ChatGPT's browser
+
+**Impact: moderate · Status: open, unmeasured rather than unresolved**
+
+The method appears in the W3C proposal and in Chrome's documentation. ChatGPT's
+site-tools page does not mention it. If unavailable, the human-in-the-loop
+demonstration does not run natively on the primary judging surface.
+
+**Mitigation.** The call is guarded on both absence and failure, and blocks only
+on an explicit `false`, so the tool never hard-fails. The fallback is the
+application's own dialog, which is the same one the reader's delete control
+opens.
+
+**Status.** Partially measured. A host can expose `requestUserInteraction` and
+then reject with "unsupported" when it is called, which the Codex shim does, so
+presence alone is not a capability check; `remove_book` now catches that
+rejection and falls back. Which branch executes in ChatGPT's browser
+specifically is still unlogged. It should be confirmed before recording so that
+the video describes the path that actually runs.
+
+---
+
+### R6 — Open Library returns the wrong book during recording
+
 **Impact: moderate · Status: accepted, mitigated**
 
-Verified: searching "the dispossessed" ranks *The Lathe of Heaven* second. During
-a live demo, an agent adding the wrong book looks like a broken product.
+Verified: searching "the dispossessed" ranks *The Lathe of Heaven* second. In a
+live demonstration, an agent adding the wrong book presents as a product defect.
 
-**Mitigation:** return year and author on every row so both agent and human can
-disambiguate; keep `limit` at 10 so the right answer is in range; rehearse with
-the exact queries used on video; keep the manual add path visible as a fallback.
-Choose demo books that rank first.
+**Mitigation.** Return year and author on every row to support disambiguation by
+both agent and reader; keep `limit` at 10 so the correct answer falls in range;
+rehearse with the exact queries used on camera; retain the manual add path as a
+visible fallback; select demonstration books that rank first.
 
 ---
 
-### R7 — Agent writes do not appear in the UI
+### R7 — Agent writes do not appear in the interface
+
 **Impact: severe, to the video · Status: closed architecturally**
 
-If tools bypassed the store, an agent's changes would only appear on reload, and
-the entire visual payoff disappears.
+Tools bypassing the store would leave the agent's changes invisible until
+reload, removing the visible result of agent activity.
 
-**Mitigation:** structural rather than procedural. Tools call `store.*`, never
-`localStorage` or React state ([05](05-architecture.md)), and the store is
-consumed through `useSyncExternalStore` so external writes re-render the tree.
+**Mitigation.** Structural rather than procedural. Tools call `store.*` and
+never `localStorage` or React state ([05-architecture.md](05-architecture.md)),
+and the store is consumed through `useSyncExternalStore` so that external writes
+re-render the tree.
 
 ---
 
-### R8 — Prompt injection via catalog data
+### R8 — Prompt injection via catalogue data
+
 **Impact: reputational, and a scored opportunity · Status: mitigated**
 
-Open Library is a public wiki. A record edited to contain instructions flows into
+Open Library is a public wiki. A record edited to contain instructions reaches
 the agent's context through `search_catalog`.
 
-**Mitigation:** `untrustedContentHint: true` on that tool, and a hard rule that
-no next-step guidance line ever interpolates catalogue text
-([04](04-tool-design.md)). Worth *raising* rather than hiding — it is concrete
-evidence of implementation depth.
+**Mitigation.** `untrustedContentHint: true` on that tool, and a rule that no
+next-step guidance line interpolates catalogue text
+([04-tool-design.md](04-tool-design.md)). The issue is documented rather than
+concealed, as it constitutes concrete evidence of implementation depth.
 
 ---
 
 ### R9 — Scope creep
+
 **Impact: moderate · Status: held**
 
-Series tracking, page counts, reading streaks, social features — all tempting,
-none scored.
+Series tracking, page counts, reading streaks and social features are all
+plausible additions and none is scored.
 
-**Mitigation:** the cut list in [06](06-roadmap.md), agreed in advance. Anything
-not in [03](03-product-spec.md) waits until after submission.
+**Mitigation.** The cut list in [06-roadmap.md](06-roadmap.md), agreed in
+advance. Anything absent from [03-product-spec.md](03-product-spec.md) waits
+until after submission.
 
 ---
 
-### R10 — The spec moves underneath us
+### R10 — Specification changes during the project
+
 **Impact: variable · Status: low over five days**
 
-WebMCP is a live draft; the API changed shape between the August 2025 proposal
-and the shipping implementations.
+WebMCP is a live draft, and the API changed shape between the August 2025
+proposal and the shipping implementations.
 
-**Mitigation:** the adapter isolates every host assumption in one file. Re-check
-both sets of docs on Wednesday morning before the final deploy.
+**Mitigation.** The adapter isolates every host assumption in one file. Both
+sets of documentation are re-checked on Wednesday morning before the final
+deployment.

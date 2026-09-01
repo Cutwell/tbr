@@ -4,52 +4,56 @@ Source: <https://webmcp.devpost.com>, fetched 29 August 2026.
 
 ## Deadline
 
-**Thursday 3 September 2026, 1:00pm PDT.** Five days from the start, and the
-last one is a half day. Every scope decision in these docs is downstream of that
-number — see [06-roadmap.md](06-roadmap.md).
+Thursday 3 September 2026, 1:00pm PDT. Five days from the project start, the
+last of them a half day. Every scope decision in this folder derives from that
+constraint; see [06-roadmap.md](06-roadmap.md).
 
 ## Prizes
 
-$35,000 across **ten winners**, roughly $3,500 each in combined cash and
-credits from OpenAI, Vercel, Netlify, Chrome, Render, Shopify and Cloudflare.
+$35,000 distributed across ten winners, approximately $3,500 each in combined
+cash and credits from OpenAI, Vercel, Netlify, Chrome, Render, Shopify and
+Cloudflare.
 
-The shape matters more than the amounts: it is a top-ten field, not a single
-grand prize, and **no prize is tied to a hosting platform**. A narrow, polished
-demo is a realistic target; breadth is not rewarded.
+The structure matters more than the amounts. It is a top-ten field rather than a
+single grand prize, and no prize is tied to a hosting platform. A narrow,
+well-executed demo is therefore a realistic target, and breadth carries no
+reward.
 
 ## Submission requirements
 
-Four, all mandatory. Missing one is a disqualification, not a deduction.
+Four artefacts, all mandatory. A missing artefact is a disqualification rather
+than a deduction.
 
-- **A live URL** judges can open in ChatGPT's in-app browser or in Chrome with
-  WebMCP enabled. Publicly reachable, no login wall.
-- **A text description** covering why WebMCP fits, how the UX improves, what
-  humans and agents do *together*, and the implementation approach.
+- **A live URL**, openable in ChatGPT's in-app browser or in Chrome with WebMCP
+  enabled, publicly reachable and without a login wall.
+- **A text description** covering the fit for WebMCP, the UX improvement, the
+  collaboration between humans and agents, and the implementation approach.
   Drafted in [08](08-submission.md).
-- **A demo video** under 3 minutes, public on YouTube, with audio.
-- **A public repo** with full source, run instructions, an open-source licence
-  file, and the tool registration code.
+- **A demo video** under three minutes, public on YouTube, with audio.
+- **A public repository** containing the source, run instructions, an
+  open-source licence file, and the tool registration code.
 
 ## Judging criteria
 
-Four, equally weighted. How TBR answers each:
+Four criteria, equally weighted.
 
-| Criterion | The answer |
+| Criterion | TBR's answer |
 |---|---|
-| **WebMCP Leverage** | `get_taste_profile` computes on the site what the agent cannot afford to read; correct security annotations; `requestUserInteraction` on the destructive call; `navigate_to` so the screen follows the conversation. Not CRUD wrappers. |
-| **Execution** | A complete reading list that stands on its own without an agent. |
-| **Potential Impact** | Reading backlogs are a real and widely-felt problem, and the pattern — personal collection plus agent — generalises to any collection app. |
-| **Creativity & Ambition** | Photograph a shelf and the books land in the list. Describe a book you can't name and it gets added. The taste profile turns a list into a recommendation. |
+| **WebMCP Leverage** | `get_taste_profile` computes on the site what the agent cannot afford to read; security annotations reflect real properties of the data; `requestUserInteraction` gates the destructive call; `navigate_to` keeps the screen aligned with the conversation. |
+| **Execution** | A complete reading list that functions without an agent present. |
+| **Potential Impact** | Reading backlogs are a common problem, and the pattern of a personal collection paired with an agent generalises to any collection app. |
+| **Creativity & Ambition** | A photographed shelf becomes list entries; a described book is identified and added; the taste profile turns a list into a recommendation. |
 
-The rules ask for a "working, non-trivial implementation" enabling
-collaboration "difficult or impossible before". A thin CRUD wrapper reads as
-trivial; [04](04-tool-design.md) targets that criterion directly.
+The rules require a "working, non-trivial implementation" enabling collaboration
+"difficult or impossible before". A thin CRUD wrapper does not meet that bar.
+[04-tool-design.md](04-tool-design.md) addresses this criterion directly.
 
 ## Eligibility and hosting
 
-UK entry is fine — the excluded regions are Belarus, Brazil, China, Crimea,
-Cuba, Iran, North Korea, Russia, Syria, Venezuela, Hong Kong and Quebec.
+Entrants must be above the age of majority in their country of residence.
+Excluded regions are Belarus, Brazil, China, Crimea, Cuba, Iran, North Korea,
+Russia, Syria, Venezuela, Hong Kong and Quebec. A UK-based entry is eligible.
 
-Hosting must be ChatGPT Sites, Cloudflare, Vercel, Render, Netlify, Shopify
-"or equivalent" — an open list. See [05](05-architecture.md) for why that lands
-on Vercel.
+Hosting must be ChatGPT Sites, Cloudflare, Vercel, Render, Netlify, Shopify "or
+equivalent", which is an open list rather than a closed set. See
+[05-architecture.md](05-architecture.md) for the selection.
