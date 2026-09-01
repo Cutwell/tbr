@@ -517,27 +517,42 @@ const removeBookTool: ToolDescriptor = {
       return err(`No book with id "${bookId}".`, "Call search_my_books to get current ids.");
     }
 
-    const askReader = () =>
-      requestConfirmation({
+    let dialogPromise: Promise<boolean> | undefined;
+    const askReader = () => {
+      // A host can invoke this callback and then fail. Reuse its promise in
+      // the fallback rather than opening a second competing dialog.
+      dialogPromise ??= requestConfirmation({
         title: `Remove “${target.title}”?`,
         body: `${target.author}. This deletes it from your list permanently.`,
         confirmLabel: "Remove it",
         source: "agent",
       });
+      return dialogPromise;
+    };
 
     /*
      * `requestUserInteraction` is the spec's mechanism for blocking a tool call
      * on a real human decision. It is not present in every host, so:
      *
-     *   - if the host provides it, we go through it (the correct path);
-     *   - if it does not, we still ask, using our own dialog directly.
+     *   - if the host provides and supports it, we go through it;
+     *   - if it is absent or throws (as the Codex shim does), we still ask,
+     *     using our own dialog directly.
      *
      * Either way the reader is asked. What we never do is delete silently
      * because a capability was missing.
      */
-    const confirmed = agent?.requestUserInteraction
-      ? await agent.requestUserInteraction(askReader)
-      : await askReader();
+    let confirmed: boolean;
+    if (!agent?.requestUserInteraction) {
+      confirmed = await askReader();
+    } else {
+      try {
+        confirmed = await agent.requestUserInteraction(askReader);
+      } catch {
+        // Some hosts expose a method that rejects with "unsupported" instead
+        // of omitting it. Capability presence alone is not a capability check.
+        confirmed = await askReader();
+      }
+    }
 
     if (confirmed === false) {
       recordToolCall("remove_book", `${target.title} — reader declined`, true);
