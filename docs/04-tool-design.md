@@ -241,6 +241,43 @@ An unknown `book_id` names the recovery path.
 No book with id "xyz". Call search_my_books to get current ids.
 ```
 
+### `finished_on`
+
+Moving a book to `read` or `dnf` records today automatically, which is right for
+almost every call: the reader is usually telling the agent something as it
+happens. `finished_on` exists for the case automation cannot serve — *"I
+finished it last Tuesday"* — and for correcting a date already recorded, which
+works without passing `status` at all.
+
+The parameter carries the format three ways, because an agent that guesses
+wrongly here fails a whole call: `format: "date"` and a `pattern` in the schema,
+and `YYYY-MM-DD (e.g. 2026-03-12)` in the description.
+
+Three rejections, each recoverable in one retry, each naming the fix:
+
+| Input | Response |
+|---|---|
+| `12/03/2019` | *"12/03/2019" is not a date finished_on accepts. Use YYYY-MM-DD, for example 2026-03-12.* |
+| `2030-01-01` | *finished_on is in the future: today is 2026-09-01. Give a day on or before today, or omit it to use today.* |
+| any date, on a book that ends up on `tbr` | *"X" would end up on the tbr shelf, which has no finish date. Pass status "read" or "dnf" alongside finished_on.* |
+
+`2026-02-31` is rejected by the first of these rather than silently rolling over
+to 3 March, which is what a bare `new Date` would do with it.
+
+The third check reads `shelf ?? target.shelf`, so it catches both a date sent to
+a book already on `tbr` and a date sent alongside a move *to* `tbr`. Accepting
+either would write a value the same call immediately contradicts, since the
+store clears `endedAt` on any move to `tbr`.
+
+The response reports the date only when the agent set it. Echoing back the
+automatic stamp would invite a follow-up call to "correct" a date that was
+already right.
+
+```
+"Piranesi": moved to read, rated 5*, finished 2019-03-12. Showing its book page.
+"Cryptonomicon": gave up 2021-05-04. Showing its book page.
+```
+
 ---
 
 ## 6. `remove_book`
@@ -435,8 +472,8 @@ Two of the three findings were not the ones expected.
 file predicted the opposite — that neither write tool "destroys anything", so
 both should declare `destructiveHint: false`. That was wrong. The bar for
 `false` is *"performs only additive updates"*, not "harmless" or "reversible".
-`update_book` replaces a shelf, a rating or a note, and the previous value is
-gone. Declaring it additive would have been false, and it would have repeated
+`update_book` replaces a shelf, a rating, a note or a finish date, and the
+previous value is gone. Declaring it additive would have been false, and it would have repeated
 the R11 mistake in reverse: choosing the annotation that attracts less scrutiny
 over the one that is true. It is also right on the merits — an agent that
 wrongly moves a book to `dnf` and rates it 1 has overwritten the reader's own

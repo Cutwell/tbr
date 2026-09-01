@@ -4,6 +4,7 @@ import { goTo } from "@/lib/store/navigation";
 import { notify } from "@/lib/store/notifications";
 import { library } from "@/lib/store/store";
 import { asRating, SHELVES, type Shelf, type TasteProfile } from "@/lib/types";
+import { isIsoDate, today } from "@/lib/utils/date";
 import type { AgentHandle, ToolArgs, ToolDescriptor, ToolResponse } from "@/lib/webmcp/adapter";
 import { err, ok, table } from "@/lib/webmcp/format";
 import { readClampedInt, readEnum, readInt, readString } from "@/lib/webmcp/input";
@@ -435,7 +436,9 @@ const updateBookTool: ToolDescriptor = {
     "rating, or replace its note. Any field left out is unchanged. When the " +
     "reader says they finished a book or gave up on one, call search_my_books " +
     "to find its book_id, then set the shelf and the rating here in a single " +
-    "call. A successful update automatically shows that book to the reader.",
+    "call. Moving to read or dnf records today as the date it ended; pass " +
+    "finished_on when the reader names a different day. A successful update " +
+    "automatically shows that book to the reader.",
   inputSchema: {
     type: "object",
     properties: {
@@ -452,6 +455,14 @@ const updateBookTool: ToolDescriptor = {
         description: "Star rating from 1 to 5. Omit to leave the rating unchanged.",
       },
       note: { type: "string", description: "Replacement note. Omit to leave the note unchanged." },
+      finished_on: {
+        type: "string",
+        format: "date",
+        pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+        description:
+          "Day it was finished or abandoned, as YYYY-MM-DD (e.g. 2026-03-12). " +
+          "Defaults to today. Not valid on tbr; cannot be in the future.",
+      },
     },
     required: ["book_id"],
     additionalProperties: false,
@@ -501,15 +512,54 @@ const updateBookTool: ToolDescriptor = {
     const shelf = readEnum<Shelf>(args, "status", SHELVES);
     const rating = asRating(readInt(args, "rating"));
     const note = readString(args, "note");
+    const finishedOn = readString(args, "finished_on");
 
-    if (!shelf && !rating && !note) {
+    if (!shelf && !rating && !note && !finishedOn) {
       return err(
         `Nothing to change on "${target.title}".`,
-        "Pass status, rating or note.",
+        "Pass status, rating, note or finished_on.",
       );
     }
 
-    const updated = library.update(target.id, { shelf, rating, note });
+    /*
+     * `finished_on` is validated here rather than left to the store, because
+     * the store's job is to apply a patch and a tool's job is to hand the agent
+     * a correctable error. All three checks are recoverable in one retry, so
+     * each names the fix.
+     *
+     * Omitting it is the common path and stays automatic: the store stamps
+     * today on a move into read or dnf. This parameter exists only for the case
+     * that automation cannot serve — "I finished it last Tuesday".
+     */
+    if (finishedOn) {
+      if (!isIsoDate(finishedOn)) {
+        return err(
+          `"${finishedOn}" is not a date finished_on accepts.`,
+          "Use YYYY-MM-DD, for example 2026-03-12.",
+        );
+      }
+
+      // Both sides are validated `YYYY-MM-DD`, so a string compare is a date
+      // compare — no parsing, and no timezone to get wrong.
+      if (finishedOn > today()) {
+        return err(
+          `finished_on is in the future: today is ${today()}.`,
+          "Give a day on or before today, or omit it to use today.",
+        );
+      }
+
+      // A book the reader still intends to read has no end date, and the store
+      // clears the field on any move to tbr — so accepting one here would write
+      // a value that the same call immediately contradicts.
+      if ((shelf ?? target.shelf) === "tbr") {
+        return err(
+          `"${target.title}" would end up on the tbr shelf, which has no finish date.`,
+          'Pass status "read" or "dnf" alongside finished_on.',
+        );
+      }
+    }
+
+    const updated = library.update(target.id, { shelf, rating, note, endedAt: finishedOn });
     if (!updated) {
       return err(`"${target.title}" could not be updated.`, "Call search_my_books to re-check.");
     }
@@ -518,6 +568,10 @@ const updateBookTool: ToolDescriptor = {
       shelf ? `moved to ${shelf}` : null,
       rating ? `rated ${rating}*` : null,
       note ? "note updated" : null,
+      // Reported only when the agent set it. The automatic stamp is not a
+      // change the agent asked for, and echoing it back as one invites a
+      // follow-up call to "correct" a date that was already right.
+      finishedOn ? `${updated.shelf === "dnf" ? "gave up" : "finished"} ${finishedOn}` : null,
     ].filter(Boolean);
 
     recordToolCall("update_book", `${updated.title} — ${changes.join(", ")}`);

@@ -219,13 +219,15 @@ is that nothing depended on it: the parser was always shared with a first-class
 UI paste field, so J6 lost nothing. It was already item 1 on the cut list in
 [06-roadmap.md](06-roadmap.md), agreed before any of this happened.
 
-**What it leaves behind.** Point 1 applies unchanged to `add_book` and
-`update_book`, which also declare nothing and therefore also present as
-destructive. That is now the annotation gap tracked in
-[04-tool-design.md](04-tool-design.md) and item 4 of the outstanding work in
-[06-roadmap.md](06-roadmap.md). The general lesson is worth stating plainly:
-under MCP, an omitted annotation is not a neutral absence of a claim. It is the
-most alarming claim available.
+**What it left behind, since fixed.** Point 1 applied unchanged to `add_book`
+and `update_book`, which also declared nothing and so also presented as
+destructive. Every tool now states every applicable annotation
+([04-tool-design.md](04-tool-design.md), Annotation defaults). Writing them out
+changed two answers: `openWorldHint` was wrong on five of seven tools, and
+`update_book` turned out to be genuinely destructive rather than merely
+corrective. The general lesson is worth stating plainly: under MCP, an omitted
+annotation is not a neutral absence of a claim. It is the most alarming claim
+available.
 
 **Residual risk.** The exact rejection text was not captured before the tool was
 removed, so the ranking above is inference from the tool's properties rather
