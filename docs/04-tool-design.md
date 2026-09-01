@@ -365,6 +365,78 @@ description budget.
 
 ---
 
+## Steering the agent — the three channels
+
+**WebMCP has no prompts primitive.** `provideContext()` accepts `{ tools }` and
+nothing else; the proposal notes MCP's `resources` and `prompts` as alignment
+goals, not current features, and ChatGPT supports a subset of even the tool API.
+There is no system prompt, no page-level instruction field, no way to hand an
+agent a workflow.
+
+So all steering happens through three surfaces we already own. Used together
+they cover the happy paths without inventing anything.
+
+### 1. Descriptions carry preconditions, not just capability
+
+A description that says only what a tool *does* leaves ordering to chance.
+Each one now names the step before or after it:
+
+> `get_taste_profile` — "…Call this **FIRST** whenever the reader asks what to
+> read next, what they would like, or anything about their reading habits —
+> before searching their shelves…"
+
+> `update_book` — "…When the reader says they finished a book or gave up on
+> one, call `search_my_books` to find its `book_id`, then set the shelf and the
+> rating here in a single call."
+
+Cross-references are deliberate and reciprocal: `search_my_books` points back at
+`get_taste_profile` for recommendation questions, and `search_catalog` insists on
+being called before `add_book` so books arrive with cover art. All still fit the
+500-character budget — the dev-time audit fails the console if one does not.
+
+### 2. Output chains to the next step
+
+The stronger channel, because it costs no description budget and arrives exactly
+when it is relevant. `get_taste_profile` ends with:
+
+```
+Next: call search_my_books with status=tbr, then recommend ONE book from that
+shelf and say briefly why it fits this profile.
+```
+
+That is the whole flagship journey, handed over at the only moment the agent is
+guaranteed to be paying attention to it.
+
+Guidance is **conditional**, not blanket. `search_my_books` appends a
+recommendation hint only when listing the *whole* `tbr` shelf — the shape of a
+"what next?" question — and stays silent on a filtered search, which is usually
+part of some other task. Unconditional advice trains an agent to ignore it.
+
+Costs measured: profile 606 → **732 chars**, tbr listing **451**. Both far
+inside the 1,500 budget.
+
+### 3. The page itself
+
+An agent reads the DOM — that is precisely what ChatGPT falls back to when tools
+are not discovered. So the agent panel names the journeys in the reader's own
+words:
+
+> "What should I read next?" · "Here's a photo of my shelf — add these to my
+> list" · "I finished Piranesi, five stars"
+
+This is the only channel that is also real UI: it orients an agent *and* tells a
+first-time reader what the app is for.
+
+### One caution
+
+Guidance in tool output travels the same channel as data from
+`search_catalog`, which is flagged `untrustedContentHint` because Open Library
+is publicly editable. Our instructions are authored by us and safe; the rule is
+that **no guidance line may ever interpolate catalogue text**, or a wiki edit
+becomes an instruction to the agent. Keep next-step strings literal.
+
+---
+
 ## Cross-cutting decisions
 
 ### Re-registration on state change

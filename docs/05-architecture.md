@@ -10,9 +10,9 @@ machine*.
 
 | Layer | Choice | Why |
 |---|---|---|
-| Build | **Vite + React + TypeScript** | Fastest path to a polished SPA. TS earns its keep on the tool schemas, where a typo is invisible until an agent misbehaves. |
+| Framework | **Next.js 16 (App Router) + React 19 + TypeScript** | Static-exportable, deploys to Vercel or Netlify in one step, and `next/font` self-hosts the display faces. TS earns its keep on the tool schemas, where a typo is invisible until an agent misbehaves. |
 | Styling | **Tailwind** | Polish per hour is what matters; "Execution" is a judged criterion. |
-| State | React state + a thin store module | Tools and UI must mutate through *one* module so agent writes re-render the UI. See below. |
+| State | External store + `useSyncExternalStore` | Tools and UI must mutate through *one* module so agent writes re-render the UI. See below. |
 | Persistence | **`localStorage`** | No backend, no auth, no login wall. |
 | Catalog | **Open Library**, called client-side | Verified CORS `*`, no key. |
 | Hosting | **Vercel** or **Netlify** | Both are sponsors with prize credits. Static SPA deploy, custom domain, HTTPS by default. |
@@ -104,8 +104,15 @@ deliberate signal:
 - A clear era skew (gives the era breakdown)
 - Enough TBR entries (~20) that "recommend one" is a real choice
 
-Add a visible **"Reset demo library"** control. Judges will experiment; the
-ability to get back to a good state costs an hour and saves the submission.
+**Do not add a reset button.** It was in an earlier draft on the reasoning that
+judges experiment and need a way back — but a control that wipes the reader's
+list has no business in a reading list, and it is the sort of thing that gets
+clicked by accident on camera. Resetting is a documented one-liner in the README
+instead (`localStorage.removeItem("tbr.library.v1")`), which is the right
+audience for it: the people who need it are running the app, not reading it.
+
+An empty or corrupt stored value reseeds on hydrate, so deleting the key is the
+whole procedure.
 
 Generate the seed from Open Library so covers are real — a wall of real cover art
 is most of the visual quality of this app.
@@ -150,16 +157,179 @@ Practical notes from testing the live API:
   Show year + author in the UI and in tool output so humans and agents can
   disambiguate.
 - **`author_name` is an array** — take `[0]`.
-- **`cover_i` is often missing.** Design a decent typographic fallback cover;
-  a grid of grey boxes will undercut the polish the demo depends on.
+- **`cover_i` is missing for roughly 1 work in 25** (3 of the 80 seeded). The
+  typographic fallback sets the title in the display face on sunk paper, so it
+  reads as a plain clothbound edition rather than as missing data.
+- **Search returns translated editions.** Resolving "The Vegetarian" by author
+  can return the Korean edition. Score candidates on title fidelity first, cover
+  presence second; when only a translation exists, keep the reader's title and
+  borrow that edition's cover.
+- **A bare work key finds nothing.** `q=OL3511459W` returns *zero* results; the
+  search index needs `q=key:/works/OL3511459W`. This is a quiet, expensive trap:
+  a caller that reads "no match" as "use what I was given" ends up shelving a
+  book titled "OL3511459W". Use `lookupByKey`.
 - Add a **debounce (~300ms)** on the human search box. The tool path needs no
   debounce — agents call once.
-- No key and no rate limit documented, but be a good citizen: cache identical
-  queries in memory for the session.
+
+### Covers
+
+- **Load them directly, not through the image optimiser.** A cover URL answers
+  302 into `archive.org` and then into a per-region `ia*.us.archive.org` host,
+  so the optimiser makes every cover depend on the *server* resolving that
+  chain. This is now moot as well as prudent: the app is statically exported,
+  and static export has no image optimiser at all.
+- That means a plain `<img>`, not `next/image`. Once covers load directly, the
+  component contributes nothing native `loading="lazy"` and CSS do not.
+- **One rendition. Do not add a `srcset`.** This was tried and reverted, and the
+  failure is worth recording. Renditions measure M 180×294 (12KB) and L 305×500
+  (26KB), so offering both looks like free bytes on small screens. But the
+  browser re-picks a candidate once layout resolves `sizes`, and each re-pick
+  **aborts the request in flight — reporting a successful `load` with
+  `naturalWidth === 0`**. Covers that had loaded perfectly well were driven into
+  the typographic fallback: 9 of 80 instead of the true 3, concentrated in the
+  eagerly-loaded first row. A delayed re-check recovered only some. One URL, one
+  request, no re-picks; the bytes were not worth randomly losing cover art.
+- `L` is the default. A 190px grid cell on a 2× display needs ~380px, and M
+  visibly softens there.
+- **`cover_i` is missing for roughly 1 work in 25** (3 of the 80 seeded).
+
+### Performance, measured
+
+Production build (`next start`, not `next dev`), cold cache, 80-book shelf:
+
+| | Before | After |
+|---|---|---|
+| App shell (DOMContentLoaded) | 219ms | unchanged — never the problem |
+| Route swap (RSC fetch for `/book/[id]`) | 18ms | unchanged — never the problem |
+| Cover, median | 430ms | ~880ms with all 80 in flight; unchanged per-image |
+| `search.json` on reload | refetched every time | **0 requests** |
+| Work detail on reload | refetched every time | **0 requests** |
+
+Two things worth knowing before optimising anything here:
+
+1. **Route swaps were never slow.** What feels slow in development is Turbopack
+   compiling routes on demand. Measure against `next start` or you will optimise
+   the wrong thing.
+2. **Open Library sends no cache headers on `search.json`.** Covers carry
+   `max-age=10800`, so they are the browser's problem; JSON was ours, refetched
+   on every reload. Hence `lib/catalog/cache.ts` — a bounded, TTL'd
+   `localStorage` cache. Book metadata is effectively immutable, so a week
+   (searches) and a month (work details) are safe and a stale entry is harmless.
+   It fails soft in every direction: a cache that throws is worse than no cache,
+   and the library must never lose its storage slot to one.
 
 **Rejected: Google Books.** An unauthenticated request from this machine returned
 **HTTP 429** on the first try. Keyed access would mean a proxy, which means a
 backend. Not worth it when Open Library works client-side.
+
+## Deployment
+
+### Does the platform affect the result? No.
+
+Worth settling, because it looks like it might. It does not:
+
+- **No prize is tied to a platform.** Every sponsor prize — OpenAI's $3,000,
+  Vercel's credits, Netlify's $500, Cloudflare's, Render's, Shopify's — goes to
+  the same ten overall winners. There is no "best Vercel app" category.
+- **The rules permit "any other provider"**, listing ChatGPT Sites, Cloudflare,
+  Vercel, Render and Netlify as examples rather than a closed set.
+- **Hosting is not a judging criterion.** The four are WebMCP Leverage,
+  Execution, Potential Impact, and Creativity & Ambition.
+
+So the only thing hosting can do is *lose* marks, by failing on Execution if the
+URL does not work when a judge opens it. Choose for reliability, nothing else.
+
+### Recommendation: deploy to both, submit the reliable one
+
+The build is a portable static export, so a second host costs one command. Put
+the provably-reachable URL on the submission form and treat ChatGPT Sites as a
+bonus if it works.
+
+**ChatGPT Sites** carries three risks, none fatal but all real:
+
+1. **Regional availability.** Reported as unavailable in the EEA, Switzerland
+   and the UK. The official docs neither confirm nor deny it, and this project
+   is built in the UK.
+2. **Access defaults.** A Site is only reachable without a ChatGPT account when
+   sharing is explicitly set to *"anyone on the Internet"* — and public
+   publishing is **off by default** in Enterprise workspaces. Any other mode
+   requires a signed-in, invited viewer. A judge meeting a sign-in wall is the
+   worst outcome available to this project.
+3. **Maturity.** It shipped in July 2026 and is in public beta.
+
+Its genuine upside is narrative rather than mechanical: it is OpenAI's own
+surface, and Sites documents native support for site tools. Nice to mention;
+not worth the submitted URL depending on it.
+
+**Vercel or Netlify** are mature static hosts with no regional restriction and
+no access-control footgun. Either is a safe primary.
+
+Whichever is used, the artefact is identical — see below.
+
+### Why the app is a static export
+
+Sites hosts "web experiences that run in the supported Sites runtime" and warns
+that "some frameworks, private networks, databases, background services, and
+hosting patterns aren't supported". Its storage primitives are **D1** and
+**R2** — Cloudflare — so it is a Workers-class runtime, not Node.
+
+TBR needs none of that. There is no backend, no API route and no server data:
+Open Library is called from the browser and the library lives in
+`localStorage`. So the safest possible artefact is plain HTML, CSS and JS, which
+any host can serve. `next.config.ts` sets:
+
+```ts
+output: "export"
+```
+
+`npm run build` then emits `out/` (~1.4MB), and that directory *is* the site.
+
+### What this forced
+
+Static export cannot serve a dynamic segment without `generateStaticParams`, and
+the build fails outright:
+
+```
+Error: Page "/book/[id]" is missing "generateStaticParams()" so it cannot be
+used with "output: export"
+```
+
+Book ids are runtime values — local uuids and arbitrary Open Library work keys —
+so they cannot be enumerated at build time. The route is therefore
+**`/book?id=…`**, a static page reading `useSearchParams`. This is a net win
+beyond portability: a query parameter also removes the RSC round trip that a
+dynamic segment costs on every navigation.
+
+Two consequences worth remembering:
+
+- **`next start` no longer applies.** Serve `out/` instead — the `tbr-static`
+  launch config runs `npx serve out`. Measure production behaviour there.
+- **There is no image optimiser in a static export.** Loading covers directly is
+  now required rather than merely prudent.
+
+### Deploying
+
+Sites accepts an existing project: *"Deploy this project with Sites. Check
+whether it is compatible, make any required changes, and give me the deployment
+URL."* Point it at the repo, and at `out/` as the artefact.
+
+Checks that matter for this app specifically:
+
+- [ ] The site is served over **HTTPS** — WebMCP requires a secure context
+- [ ] **No login or interstitial** in front of the page
+- [ ] Tools register from the **top-level page**, never an iframe (ChatGPT does
+      not discover tools inside iframes)
+- [ ] `covers.openlibrary.org` and `openlibrary.org` are reachable from the
+      browser — both send `access-control-allow-origin: *`, but a restrictive
+      host CSP would block them
+- [ ] Open the deployed URL in the ChatGPT browser and confirm the agent
+      indicator reads **"7 tools live"**
+
+### If deploying to Sites
+
+- [ ] Confirm the plan and region allow it (see the risks above)
+- [ ] Set sharing to **"anyone on the Internet"** and verify the URL in a
+      private window, signed out of ChatGPT entirely
 
 ## Deployment checklist
 
