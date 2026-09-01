@@ -16,84 +16,141 @@ upload finishing at 1:04pm.
 
 ---
 
-## Day 1 — Saturday 29 Aug: **Spike the unknowns**
+## Day 1 — Saturday 29 Aug: **Spike the unknowns** ✅ *verified, some detail unresolved*
 
-No product work today. Three open questions from
-[02-webmcp-reference.md](02-webmcp-reference.md) determine the shape of all seven
-tools, and guessing wrong costs a rebuild on Day 3.
+Days 2 and 3 ran ahead of schedule. All seven tools have since been exercised
+live in ChatGPT's in-app browser — registered, listed under **Site tools**,
+callable, and returning usable output. R1 in [07-risks.md](07-risks.md) (the
+namespace divergence causing a silent zero-tools failure) is resolved against
+the real judging surface, not just the local dev harness.
 
-- [ ] Install the [Model Context Tool Inspector](https://chromewebstore.google.com/detail/model-context-tool-inspec/gbpdfapgefenggkahomfgkhfehlcenpd) extension
-- [ ] Enable `chrome://flags/#enable-webmcp-testing`, relaunch
-- [ ] Install the ChatGPT desktop app; confirm the in-app browser and its
-      **"Site tools"** address-bar panel
-- [ ] Build a throwaway single-page app with **one** tool (`echo`) and deploy it
-      to Vercel/Netlify **today** — proving the deploy path early is worth more
-      than any feature
-- [ ] **Answer Q1:** does ChatGPT accept `{content:[{type:'text',…}]}`, or a bare
-      object? Try both.
-- [ ] **Answer Q2:** does `agent.requestUserInteraction()` work in ChatGPT's
-      browser, or Chrome only? This decides whether tool #6 is the demo
-      centrepiece or a fallback modal.
-- [ ] **Answer Q3:** what happens past 1,500 characters — truncate, error, or
-      nothing?
-- [ ] Confirm which namespace each host exposes; finalise `adapter.ts`
-- [ ] Fork and skim one OpenAI reference app (Mabel's Table for state handling,
-      Kurio for search/cart shape)
+- [x] Confirm the ChatGPT in-app browser exposes **"Site tools"** and lists
+      TBR's seven tools
+- [x] Confirm which namespace ChatGPT exposes; `adapter.ts` registers
+      successfully against it
+- [x] Deploy path proven — a live URL works end-to-end
+- [ ] Q1–Q3 from [02-webmcp-reference.md](02-webmcp-reference.md) (exact return
+      shape accepted, whether `requestUserInteraction` fired natively vs. the
+      fallback, overrun behaviour) were **not individually instrumented** —
+      the app worked regardless of which code path ran, so it isn't known
+      which one did. Worth confirming Q2 specifically before the demo video,
+      since the human-in-the-loop beat depends on it.
 
-**Exit criteria:** a live URL with one working tool, callable from ChatGPT's
-in-app browser, and all three questions answered in writing at the bottom of
-[02](02-webmcp-reference.md).
-
-If the deploy or the ChatGPT connection is not working by end of Saturday, that
-is the emergency — not the feature list.
+**Exit criteria met:** a live URL with tools callable from ChatGPT's in-app
+browser. The three low-level protocol questions remain open in writing at the
+bottom of [02](02-webmcp-reference.md), downgraded from blocking to
+nice-to-confirm now that end-to-end behaviour is verified.
 
 ---
 
-## Day 2 — Sunday 30 Aug: **The human app**
+## Day 2 — Sunday 30 Aug: **The human app** ✅ *done early, 29 Aug*
 
 Build the product as if WebMCP did not exist. It has to stand alone.
 
-- [ ] Vite + React + TS + Tailwind scaffold
-- [ ] `store.ts` with subscribe/emit; `localStorage` persistence
-- [ ] `openlibrary.ts` — search with `fields` projection, cover URLs, typographic
+- [x] Next.js 16 + React 19 + TS + Tailwind v4 scaffold (Next over Vite: static
+      export, one-step deploy to Vercel/Netlify, `next/font` self-hosting)
+- [x] `store.ts` with subscribe/emit; `localStorage` persistence
+- [x] `openlibrary.ts` — search with `fields` projection, cover URLs, typographic
       fallback cover
-- [ ] **Shelf screen**: filter chips with counts, book grid, empty state
-- [ ] **Add screen**: debounced search, results, tap to add → TBR
-- [ ] Shelf changes (J2), star rating (J5), remove with undo toast (J4)
-- [ ] Manual "add by title" escape hatch
+- [x] **Shelf screen**: filter chips with counts, book grid, empty state
+- [x] **Add screen**: debounced search, results, tap to add → TBR
+- [x] Shelf changes (J2), star rating (J5), remove with confirm + undo toast (J4)
+- [x] Manual "add by title" escape hatch
+- [x] Light/dark themes, atoms → molecules → organisms → templates
 
 **Exit criteria:** you can add, shelve, rate and remove books by hand, and it
-looks good enough to screenshot.
+looks good enough to screenshot. **Met.**
 
 ---
 
-## Day 3 — Monday 31 Aug: **The tools**
+## Day 3 — Monday 31 Aug: **The tools** ✅ *done early, 29 Aug*
 
-- [ ] `adapter.ts` finalised against Day 1 findings
-- [ ] `format.ts`: `ok()`, `err()`, pipe-table renderer, `budget()` guard with
-      non-mid-row truncation
-- [ ] Tools 1–5 (`search_catalog`, `search_my_books`, `get_taste_profile`,
+- [x] `adapter.ts` — both namespaces, both registration styles
+- [x] `format.ts`: `ok()`, `err()`, pipe-table renderer, `withinBudget()` guard
+      truncating at a row boundary with an explicit marker
+- [x] Tools 1–5 (`search_catalog`, `search_my_books`, `get_taste_profile`,
       `add_book`, `update_book`)
-- [ ] `profile.ts` — the aggregation and the heuristic **Signal** line
-- [ ] Tool 6 `remove_book` with `requestUserInteraction` (or fallback modal per
-      Day 1 findings)
-- [ ] `AgentActivity.tsx` — the live "tool fired" indicator
-- [ ] Build-time assertions on name/description/output character budgets
-- [ ] Verify every tool through the Inspector extension
+- [x] `profile.ts` — the aggregation and the heuristic **Signal** line
+- [x] Tool 6 `remove_book`, with `requestUserInteraction` *and* a direct-dialog
+      fallback for hosts that lack it
+- [x] Tool 7 `import_books` — shares its parser with the UI paste box
+- [x] `AgentPanel.tsx` — connection status and a live tool-call log
+- [x] `auditToolDescriptors()` — dev-time assertions on the character budgets
+- [x] `window.__tbrTools` dev harness; all seven exercised from the console
 
-**Exit criteria:** all tools callable from the Inspector, each returning under
-1,500 characters, each error path naming a next step.
+Measured output: `get_taste_profile` 606 chars, `search_my_books` (5 of 24)
+352 chars, `search_catalog` 161 chars — all well inside the 1,500 budget.
 
-**If Monday runs late:** cut `import_books` (tool 7) to a UI-only paste box. That
-is the pre-agreed cut — see the cut list below.
+**Exit criteria:** all tools callable, each under 1,500 characters, each error
+path naming a next step. **Met** — though verification so far is via the dev
+harness, *not* a real host. See Day 1 below, which is now the critical path.
 
 ---
+
+---
+
+# STATUS — Sunday 30 August, 4 days 7 hours to deadline
+
+Days 1–3 are complete and ahead of schedule. **Everything below this line is
+what remains.**
+
+## Done
+
+- The full human app: four routes (`/`, `/search`, `/taste`, `/book?id=`),
+  light and dark, responsive, 80-book seeded library
+- All seven WebMCP tools, **verified live in the ChatGPT browser**
+- Agent steering: sequencing in tool descriptions, next-step chaining in tool
+  output, suggested prompts in the UI ([04](04-tool-design.md))
+- Performance: persistent Open Library cache (warm reload = zero network),
+  right-sized covers, skeleton loading ([05](05-architecture.md))
+- Static export (`output: "export"`) — deployable to any accepted host
+- MIT `LICENSE`, README, this `docs/` folder
+
+## Remaining — in priority order
+
+### 1. Get the code into a public repo ✅ *committed locally, push pending*
+Work is split into seven reviewable commits (scaffold cleanup, static-export
+config + licence, theme/layout, data layer, component library, app routes,
+and a UI fix) against `origin` = `https://github.com/Cutwell/tbr`. The final
+`git push` needs to run from a machine with GitHub credentials — it couldn't
+run from the sandboxed environment that made the commits.
+
+- [x] Commit the work in reviewable chunks
+- [ ] `git push -u origin main` (from an authenticated machine)
+- [ ] Confirm `LICENSE` is present at the root and the repo is **public**
+
+### 2. Deploy, and verify the live URL
+- [ ] Deploy to ChatGPT Sites (**check UK availability first** — see
+      [05](05-architecture.md#-availability--verify-before-relying-on-this))
+- [ ] Keep a fallback host configured; `out/` deploys as-is to Vercel or Netlify
+- [ ] Open the deployed URL in the ChatGPT browser on a **cold profile** and
+      confirm the indicator reads "7 tools live"
+- [ ] Walk A1, A2 and A3 end to end against the deployed site
+
+### 3. Record the demo video ⚠️ *not started — the largest remaining task*
+Mandatory: under 3 minutes, public YouTube, with audio. Script and shot list are
+already written in [08-submission.md](08-submission.md).
+- [ ] Rehearse A1 ("what should I read next?") — the flagship, most of the value
+- [ ] Record; budget 3–4 takes
+- [ ] Upload as **Public**, not Unlisted, and verify in a private window
+
+### 4. Finalise and submit
+- [ ] Update the submission text with the real URLs ([08](08-submission.md))
+- [ ] Screenshots: the shelf, ChatGPT's Site tools panel, the confirmation dialog
+- [ ] **Submit on Devpost Wednesday**, leaving Thursday as buffer
+
+## Known gaps, accepted
+
+- A transient cover failure falls back for that session rather than retrying.
+  Self-heals on reload; true rate is 3 of 80 books with no cover art.
+- No reset control in the UI by design — resetting is a documented
+  `localStorage` deletion in the README.
 
 ## Day 4 — Tuesday 1 Sep: **Seed, polish, and rehearse**
 
 - [ ] **Seed library** — 60–90 books with real covers and deliberate taste signal
       ([05](05-architecture.md)). Do this first; everything else depends on it.
-- [ ] "Reset demo library" control
+- [x] ~~"Reset demo library" control~~ — cut; documented in the README instead
 - [ ] "Unsupported browser" banner with setup link
 - [ ] `import_books` if it survived Day 3
 - [ ] **Full rehearsal of all three agent journeys in ChatGPT's in-app browser**,

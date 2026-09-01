@@ -182,14 +182,34 @@ Reference demos to crib patterns from:
 Travel Booking, Le Petit Bistro) and OpenAI's forkable examples (Kurio, Mabel's
 Table, The Archive).
 
-## Open questions to resolve on Day 1
+## Open questions — status after Day 1
 
-1. Does ChatGPT's browser accept the `{content:[…]}` return shape, or does it
-   require a bare object? **Resolve empirically before building 8 tools.**
-2. Is the second `execute` argument named/shaped consistently enough for
-   `requestUserInteraction` to work in ChatGPT's browser, or is it Chrome-only?
-3. Does ChatGPT enforce the 1.5K output cap by truncating, erroring, or not
-   at all?
+All seven tools were exercised live in ChatGPT's in-app browser and worked
+end-to-end: registered, discoverable in **Site tools**, callable, and
+returning output the agent could act on. That confirms the adapter's
+namespace detection and the overall registration path against the real
+judging surface — the biggest risk on this page (R1 in
+[07-risks.md](07-risks.md)) is resolved.
 
-These three answers determine the shape of every tool. Day 1 spike, before
-anything else. See [06-roadmap.md](06-roadmap.md).
+The three specific protocol questions below were **not individually
+instrumented** during that pass — nothing logged which code path actually
+ran — so treat them as unconfirmed rather than answered. The code was written
+defensively enough (see each item) that the app worked regardless of which
+branch fired, which is exactly why it wasn't obvious from the outside which
+one did:
+
+1. **Return shape.** Still unknown whether ChatGPT requires the
+   `{content:[…]}` form or accepts a bare object — `format.ts`'s `ok()`/`err()`
+   always emit the content-block form, so this was never distinguished.
+2. **`requestUserInteraction`.** Still unknown whether it fired natively in
+   ChatGPT's browser or whether `remove_book` ran its direct-dialog fallback
+   instead — `agent?.requestUserInteraction?.()` makes both paths look
+   identical from outside. Worth a targeted check (e.g. a console log in each
+   branch) before relying on this for the demo video's human-in-the-loop beat.
+3. **Overrun behaviour.** Never observed, because no tool exceeded the 1.5K
+   budget in testing (606 chars was the largest measured output) — the
+   truncate-vs-error question simply didn't come up.
+
+If the video script depends on any of these specifics (Q2 especially — see
+[08-submission.md](08-submission.md)'s human-in-the-loop beat), confirm it
+directly rather than assuming.

@@ -6,17 +6,21 @@ submission outright.
 ---
 
 ### R1 — Judges open the URL and see no tools
-**Likelihood: medium · Impact: fatal**
+**Likelihood: resolved · Impact: fatal**
 
 The `document.modelContext` vs `navigator.modelContext` divergence
 ([02](02-webmcp-reference.md)) means registering against the wrong namespace
 produces an app with zero agent capability and no error message.
 
 **Mitigation:** the adapter shim, supporting both namespaces and both
-`registerTool` and `provideContext`. Verify in *both* Chrome and the ChatGPT
-in-app browser on Day 1, before any tool is written. Show a visible
+`registerTool` and `provideContext`. Show a visible
 "agent tools: ready / unsupported" status in the UI so the failure is loud
 rather than silent.
+
+**Status:** verified — all seven tools registered and callable live in the
+ChatGPT in-app browser, TBR's judging surface. Not yet separately re-checked
+in Chrome, but the shared adapter code path makes that low-risk. Re-verify
+against the final deployed URL (not just localhost) before submission.
 
 ---
 
@@ -28,9 +32,11 @@ A judge with empty `localStorage` asks "what should I read next?" and
 produces nothing for the one person who matters.
 
 **Mitigation:** seed 60–90 books on first visit, with deliberate taste signal
-([05](05-architecture.md)). Plus a "Reset demo library" button, because judges
-will experiment and need a way back. **This is scheduled first on Day 4 and must
-not slip** — it is the single highest-leverage hour in the project.
+([05](05-architecture.md)). Recovery is a documented `localStorage` deletion
+rather than a button: a control that wipes the reader's list does not belong in
+a reading list, and an accidental click on camera would be worse than the
+problem it solves. **This is scheduled first on Day 4 and must not slip** — it
+is the single highest-leverage hour in the project.
 
 ---
 
@@ -62,18 +68,25 @@ truncate silently.
 ---
 
 ### R5 — `requestUserInteraction` is not supported in ChatGPT's browser
-**Likelihood: medium · Impact: moderate**
+**Likelihood: unconfirmed · Impact: moderate**
 
 It appears in the W3C proposal and Chrome's docs; ChatGPT's site-tools page does
 not mention it. If unavailable, the human-in-the-loop demo — a deliberate
 centrepiece — does not run on the primary judging surface.
 
-**Mitigation:** Day 1 spike answers this. Code defensively
-(`agent?.requestUserInteraction?.()`, proceed on `undefined`, block only on an
-explicit `false`) so the tool never hard-fails. If unsupported, fall back to our
-own modal driven by store state, demo it in Chrome, and describe the difference
-honestly in the submission text. Do not claim a capability the judge's browser
-will not reproduce.
+**Mitigation:** code defensively (`agent?.requestUserInteraction?.()`, proceed
+on `undefined`, block only on an explicit `false`) so the tool never
+hard-fails. If unsupported, fall back to our own modal driven by store state,
+demo it in Chrome, and describe the difference honestly in the submission
+text. Do not claim a capability the judge's browser will not reproduce.
+
+**Status:** `remove_book` worked end-to-end in the ChatGPT browser during
+verification, but which branch actually ran — native
+`requestUserInteraction` or the fallback modal — was not logged or observed
+directly, so this risk is not closed, only unmeasured. See the note in
+[02-webmcp-reference.md](02-webmcp-reference.md#open-questions--status-after-day-1).
+Confirm before the demo video: the script's human-in-the-loop beat should
+describe whichever path is actually live, not assume the native one.
 
 ---
 
