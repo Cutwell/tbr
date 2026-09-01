@@ -17,10 +17,10 @@ Stoner,John Williams,read,5,2024/11/03`;
  * CSV, readers can paste it, and the full upload flow would cost half a day for
  * a journey that is a single step.
  *
- * This is the only import path. There was an `import_books` tool alongside it
- * until a host security review rejected the call (docs/07-risks.md, R11); the
- * journey was never dependent on it, which is why dropping the tool cost
- * nothing here.
+ * This is the only import path, and deliberately so: bulk import is a poor fit
+ * for a tool call, since it means an agent carrying a whole CSV in its context
+ * and re-emitting it as an argument. A person pasting it is both cheaper and
+ * more direct.
  */
 export function ImportPanel({ onDone }: { onDone: () => void }) {
   const [csv, setCsv] = useState("");

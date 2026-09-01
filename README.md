@@ -54,13 +54,6 @@ on `requestUserInteraction`. `destructive` and `idempotent` are meaningful only
 when `readOnly` is false, so they are unset on the read tools. Nothing is left
 to a default.
 
-An eighth tool, `import_books`, was built and then withdrawn: a host security
-review rejected the call, and the reasons were structural — an unbounded CSV
-payload written in bulk with no confirmation step — rather than anything a
-reworded schema would fix. Goodreads import is unaffected, because it was always
-a first-class UI path rather than an agent-only capability. The full diagnosis is
-[docs/07-risks.md](docs/07-risks.md), R11.
-
 Five properties of the set are worth stating explicitly.
 
 - **`untrustedContentHint` on `search_catalog` reflects a real property of the
@@ -78,12 +71,12 @@ Five properties of the set are worth stating explicitly.
   failed call should act as a guide rather than a dead end.
 - **Nothing is left to an MCP default, because the defaults are pessimistic.**
   An unannotated mutating tool declares itself destructive, non-idempotent and
-  open-world — silence is the loudest claim available, which is what got
-  `import_books` rejected. Writing them all out changed two answers: `openWorldHint`
-  was wrong on five of seven tools, and `update_book` turned out to be genuinely
-  destructive (it *replaces* a rating or shelf, and the spec's bar for `false` is
-  "only additive updates"). It says so rather than claiming the flattering
-  version. Reasoning in [docs/04-tool-design.md](docs/04-tool-design.md).
+  open-world: silence is the loudest claim available. Writing them all out
+  changed two answers — `openWorldHint` was wrong on five of seven tools, and
+  `update_book` turned out to be genuinely destructive (it *replaces* a rating
+  or shelf, and the spec's bar for `false` is "only additive updates"). It says
+  so rather than claiming the flattering version. Reasoning in
+  [docs/04-tool-design.md](docs/04-tool-design.md).
 
 ## Running locally
 

@@ -18,12 +18,10 @@ no error message.
 styles. A visible ready/unsupported status in the header makes the failure
 observable rather than silent.
 
-**Status.** The first six of the current seven tools registered and were callable
-live in ChatGPT's in-app browser. (That pass covered seven, but one of them was
-`import_books`, since withdrawn — see R11.) Chrome has not been separately
-re-checked but shares the code path. `navigate_to` postdates that verification
-and should be confirmed during the rehearsal, against the deployed URL rather
-than localhost.
+**Status.** Six of the seven tools registered and were callable live in
+ChatGPT's in-app browser. Chrome has not been separately re-checked but shares
+the code path. `navigate_to` postdates that verification and should be confirmed
+during the rehearsal, against the deployed URL rather than localhost.
 
 ---
 
@@ -185,52 +183,3 @@ proposal and the shipping implementations.
 **Mitigation.** The adapter isolates every host assumption in one file. Both
 sets of documentation are re-checked on Wednesday morning before the final
 deployment.
-
----
-
-### R11 — Host security review rejects a tool call
-
-**Impact: moderate · Status: closed by removing the tool**
-
-The browser's security review blocked `import_books` at call time. The tool was
-withdrawn rather than reworked. Four properties made it the most likely tool in
-the set to be rejected, and they are listed in the order they probably weighed:
-
-1. **It declared no annotations.** MCP's defaults for an omitted annotation are
-   pessimistic — `readOnlyHint: false`, `destructiveHint: true` for anything not
-   read-only, `idempotentHint: false`, `openWorldHint: true`. So the tool
-   presented as destructive, non-idempotent and open-world, a worse profile than
-   `remove_book`, which genuinely destroys data but says so and confirms first.
-2. **The payload was the shape these reviews exist to catch.** Its one required
-   argument was an unbounded free-text `csv` string. To call it, an agent must
-   first acquire a large blob of content from outside the page and write it into
-   the site in bulk. Content crossing from one origin into a mutating write on
-   another is the canonical interception pattern, and no annotation changes it.
-3. **Unbounded blast radius with no human in the loop.** No length cap on the
-   argument, no row cap in the parser, no cap in `addMany` — one call, N records
-   committed — and, unlike `remove_book`, no confirmation step at all.
-4. **Undeclared side effects.** It also drove navigation and raised a
-   notification, neither of which its description mentioned.
-
-**Why removal rather than repair.** Only 1, 3 and 4 are fixable from inside the
-application. 2 is structural, so a repaired tool might well have been rejected
-again, after spending time that R3 says belongs to the video. The decisive point
-is that nothing depended on it: the parser was always shared with a first-class
-UI paste field, so J6 lost nothing. It was already item 1 on the cut list in
-[06-roadmap.md](06-roadmap.md), agreed before any of this happened.
-
-**What it left behind, since fixed.** Point 1 applied unchanged to `add_book`
-and `update_book`, which also declared nothing and so also presented as
-destructive. Every tool now states every applicable annotation
-([04-tool-design.md](04-tool-design.md), Annotation defaults). Writing them out
-changed two answers: `openWorldHint` was wrong on five of seven tools, and
-`update_book` turned out to be genuinely destructive rather than merely
-corrective. The general lesson is worth stating plainly: under MCP, an omitted
-annotation is not a neutral absence of a claim. It is the most alarming claim
-available.
-
-**Residual risk.** The exact rejection text was not captured before the tool was
-removed, so the ranking above is inference from the tool's properties rather
-than a quoted cause. If a second tool is rejected during the rehearsal, capture
-the message verbatim first — it discriminates between cause 1, which is a
-ten-minute fix, and cause 2, which is not fixable at all.

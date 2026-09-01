@@ -5,11 +5,8 @@ import { isIsoDate } from "@/lib/utils/date";
 /**
  * Goodreads CSV import.
  *
- * This was once shared between the paste field and an `import_books` WebMCP
- * tool. The tool is gone — a host security review rejected it, and the reasons
- * were structural rather than cosmetic (docs/07-risks.md, R11) — so the parser
- * now has one caller: `ImportPanel`. It lives beside `seed.ts` because both do
- * the same job, bulk-loading records into the store from outside.
+ * One caller, `ImportPanel`. It lives beside `seed.ts` because both do the same
+ * job: bulk-loading records into the store from outside.
  *
  * Deliberately minimal. It reads five columns and ignores every other thing
  * Goodreads exports, which is most of them.

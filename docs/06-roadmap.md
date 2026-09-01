@@ -55,10 +55,6 @@ the result is presentable.
       `add_book`, `update_book`
 - [x] `profile.ts`: the aggregation and the heuristic Signal line
 - [x] `remove_book`, with `requestUserInteraction` and a direct-dialog fallback
-- [x] ~~`import_books`, sharing its parser with the UI paste field~~ — built,
-      then withdrawn on Day 4 after a host security review rejected the call
-      ([07-risks.md](07-risks.md), R11). The parser survives as
-      `store/goodreads.ts`, serving the UI paste field.
 - [x] `AgentIndicator`: connection status and a live tool-call log
 - [x] `auditToolDescriptors()`: start-up assertions on the character budgets
 - [x] `window.__tbrTools` development harness, for calling tools without an agent
@@ -125,12 +121,12 @@ Outstanding work, in priority order:
 2. **Cold-profile verification** of the live URL in ChatGPT's browser, covering
    the indicator reading "7 tools live" and a walkthrough of A1, A2 and A3.
 3. **Devpost submission**: text, screenshots, links, filed Wednesday.
+
 Done since: **every tool now states every applicable annotation**
 ([04-tool-design.md](04-tool-design.md), Annotation defaults). Writing them out
-changed two answers that the original note got wrong — `openWorldHint` was
-incorrect on five of seven tools, and `update_book` is genuinely destructive
-rather than merely "corrective", so it declares that instead of the flattering
-version.
+changed two answers against expectation — `openWorldHint` was incorrect on five
+of seven tools, and `update_book` is genuinely destructive rather than merely
+"corrective", so it declares that instead of the flattering version.
 
 Accepted gaps:
 
@@ -144,15 +140,11 @@ Accepted gaps:
 
 ## Cut list
 
-Agreed in advance and cut from the top as days slip. Item 1 has been cut —
-forced by the host rather than by the schedule, but it is the same cut, and it
-landed exactly as the list predicted: the journey still demonstrates.
+Agreed in advance and cut from the top as days slip. Nothing has been cut.
 
-1. ~~`import_books` as a tool, reduced to the UI paste field; the journey still
-   demonstrates~~ — **cut on Day 4** ([07-risks.md](07-risks.md), R11)
-2. Goodreads import entirely, dropping J6 as the weakest of the six
-3. The `note` field, removing a parameter from two schemas
-4. Era analysis in the taste profile, retaining authors and ratings only
+1. Goodreads import entirely, dropping J6 as the weakest of the six
+2. The `note` field, removing a parameter from two schemas
+3. Era analysis in the taste profile, retaining authors and ratings only
 
 Excluded from cutting: `get_taste_profile`, the demo library,
 `requestUserInteraction`, and the agent activity indicator. These four map

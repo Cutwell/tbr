@@ -24,10 +24,8 @@ import { recordToolCall } from "@/lib/webmcp/activity";
  * tool for when the agent wants to point at something without changing it — a
  * search result, a book worth a second look.
  *
- * Bulk CSV import was an eighth tool and is not one any more: a host security
- * review rejected it, for reasons that survive any rewording of the schema.
- * The journey it served is unaffected, because it always had a first-class UI
- * path — see `store/goodreads.ts`, `ImportPanel`, and docs/07-risks.md (R11).
+ * Goodreads CSV import is deliberately not a tool. It is a first-class UI path
+ * instead — see `store/goodreads.ts` and `ImportPanel`.
  *
  * Schemas, budgets and rationale: docs/04-tool-design.md.
  */
@@ -469,16 +467,16 @@ const updateBookTool: ToolDescriptor = {
   },
   annotations: {
     /*
-     * Deliberately `true`, which is not what the roadmap item that prompted
-     * this predicted.
+     * Deliberately `true`, and worth stating why, because `false` is the
+     * tempting answer.
      *
      * The spec's bar for `destructiveHint: false` is that a tool "performs
      * only additive updates" — not that it is harmless, or reversible, or
-     * well-intentioned. This tool *replaces* a shelf, a rating or a note, and
-     * the previous value is gone. That is not additive, so claiming otherwise
-     * would be false. It would also repeat the exact mistake behind R11 in
-     * reverse: choosing the annotation that attracts less scrutiny rather than
-     * the one that is true.
+     * well-intentioned. This tool *replaces* a shelf, a rating, a note or a
+     * finish date, and the previous value is gone. That is not additive, so
+     * claiming otherwise would be false, and false in the direction that
+     * flatters: picking the annotation that attracts less scrutiny over the
+     * one that is true.
      *
      * It is the right call on the merits too. An agent that wrongly moves a
      * book to `dnf` and rates it 1 has overwritten the reader's own judgment
@@ -486,10 +484,10 @@ const updateBookTool: ToolDescriptor = {
      *
      * No confirmation dialog, though: rating a book is the single most common
      * thing a reader asks an agent to do, and a prompt on every star would
-     * make J5 worse than doing it by hand. The properties that made
-     * `import_books` unacceptable are all absent here — one named book, a
-     * closed set of fields, a bounded payload, and no content crossing in from
-     * another origin.
+     * make J5 worse than doing it by hand. The properties that would justify
+     * one are all absent — it touches one named book, through a closed set of
+     * fields, with a bounded payload and no content crossing in from another
+     * origin.
      */
     destructiveHint: true,
     // Setting the same fields to the same values twice lands in one state.

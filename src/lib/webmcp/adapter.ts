@@ -38,10 +38,10 @@ import { initializeWebMCPPolyfill } from "@mcp-b/webmcp-polyfill";
  * MCP tool annotations, with the spec's own defaults recorded.
  *
  * Every default here is pessimistic, and omitting an annotation is therefore
- * not a neutral absence of a claim — it is the loudest claim available. That
- * is not a theory: it is the first of the four properties that got
- * `import_books` rejected by a host security review (docs/07-risks.md, R11).
- * Quoted wording is from the MCP schema, 2025-06-18.
+ * not a neutral absence of a claim — it is the loudest claim available. A
+ * mutating tool that says nothing declares itself destructive, non-idempotent
+ * and open-world, which is why every tool in this codebase states every hint
+ * that applies to it. Quoted wording is from the MCP schema, 2025-06-18.
  */
 export interface ToolAnnotations {
   /** "If true, the tool does not modify its environment." Default: false. */

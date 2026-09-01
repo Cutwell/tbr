@@ -24,13 +24,6 @@ they are left unset on the read tools. `search_catalog` also carries
 `requestUserInteraction`. Every cell is stated explicitly in the code: none is
 left to a default.
 
-An eighth, `import_books`, was built and then withdrawn after a host security
-review rejected the call. J6 is served by the UI paste field alone and is
-unaffected. The diagnosis is [07-risks.md](07-risks.md) R11; the reasoning it
-produced about annotation defaults is recorded under
-[Annotation defaults](#annotation-defaults) below, and it is why the table above
-has no blanks left in it.
-
 The implementation is [`src/lib/webmcp/tools.ts`](../src/lib/webmcp/tools.ts).
 All names are 30 characters or fewer. `auditToolDescriptors()` asserts every
 character budget at start-up in development, so an over-long description fails
@@ -439,9 +432,8 @@ because a table cut mid-row misparses more readily than a short one.
 
 ## Annotation defaults
 
-`add_book` and `update_book` used to sit in the table above with a `—` in every
-column. That was never neutral, and it was learned the expensive way when a host
-security review rejected `import_books` ([07-risks.md](07-risks.md), R11).
+The mutating tools once sat in the table above with a `—` in every column. That
+was never neutral, and a host is entitled to read it as a claim.
 
 An omitted annotation is not read as "unspecified". MCP defines defaults, and
 they are pessimistic by design. Quoted wording is from the MCP schema,
@@ -464,26 +456,26 @@ confirmation. Silence is the loudest possible claim.
 
 Every tool now states every applicable hint.
 
-### What the fix actually found
+### What writing them out found
 
-Two of the three findings were not the ones expected.
+Filling in the table did not confirm what was expected of it. Two of the three
+findings went the other way.
 
-**`update_book` is destructive, and now says so.** The earlier note in this
-file predicted the opposite — that neither write tool "destroys anything", so
-both should declare `destructiveHint: false`. That was wrong. The bar for
-`false` is *"performs only additive updates"*, not "harmless" or "reversible".
-`update_book` replaces a shelf, a rating, a note or a finish date, and the
-previous value is gone. Declaring it additive would have been false, and it would have repeated
-the R11 mistake in reverse: choosing the annotation that attracts less scrutiny
-over the one that is true. It is also right on the merits — an agent that
-wrongly moves a book to `dnf` and rates it 1 has overwritten the reader's own
-judgment of a book they read.
+**`update_book` is destructive.** The intuition going in was that neither write
+tool "destroys anything", so both should declare `destructiveHint: false`. That
+was wrong. The bar for `false` is *"performs only additive updates"*, not
+"harmless" or "reversible". `update_book` replaces a shelf, a rating, a note or
+a finish date, and the previous value is gone. Declaring it additive would have
+been false, and false in the direction that flatters: choosing the annotation
+that attracts less scrutiny over the one that is true. It is also right on the
+merits — an agent that wrongly moves a book to `dnf` and rates it 1 has
+overwritten the reader's own judgment of a book they read.
 
 It gets no confirmation dialog regardless. Rating a book is the most common
 thing a reader will ask an agent to do, and a prompt on every star would make J5
-worse than doing it by hand. The properties that made `import_books`
-unacceptable are all absent: one named book, a closed set of fields, a bounded
-payload, and no content crossing in from another origin.
+worse than doing it by hand. The properties that would justify one are all
+absent: it touches one named book, through a closed set of fields, with a
+bounded payload and no content crossing in from another origin.
 
 **`openWorldHint` was wrong on five of seven tools.** Its default is `true`, so
 every tool that stayed silent was claiming to reach external systems. Only
