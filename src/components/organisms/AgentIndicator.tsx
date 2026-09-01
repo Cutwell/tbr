@@ -87,22 +87,6 @@ export function AgentIndicator() {
   const names = ready ? status.toolNames : tools.map((tool) => tool.name);
   const lastCall = activity[0];
 
-  const troubleshooting = (
-    <ul className="mt-2.5 flex list-disc flex-col gap-1.5 pl-4 text-[0.8125rem] leading-snug text-ink-soft marker:text-ink-faint">
-      <li>ChatGPT: Browser settings → Permissions → Enable site tools.</li>
-      <li>
-        Use GPT-5.6 Sol or Terra — Luna has WebMCP disabled, and site tools are
-        off in Enterprise and Edu workspaces.
-      </li>
-      <li>
-        Chrome:{" "}
-        <code className="bg-paper-sunk px-1 py-px font-mono text-[0.7rem]">
-          chrome://flags/#enable-webmcp-testing
-        </code>
-      </li>
-    </ul>
-  );
-
   return (
     <div ref={container} className="relative">
       <button
@@ -156,45 +140,24 @@ export function AgentIndicator() {
             </h2>
           </div>
 
-          {confirmed && (
-            <>
-              <p className="mt-2.5 text-[0.8125rem] leading-relaxed text-ink-soft">
-                Your agent can search these shelves, learn your taste and add
-                books. Try asking:
-              </p>
-              <ul className="mt-2.5 flex flex-col gap-1.5">
-                {SUGGESTED_PROMPTS.map((prompt) => (
-                  <li
-                    key={prompt}
-                    className="border-l border-rule pl-2.5 text-[0.8125rem] leading-snug text-pretty text-ink-soft"
-                  >
-                    “{prompt}”
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          <p className="mt-2.5 text-[0.8125rem] leading-relaxed text-ink-soft">
+            Try asking an agent:
+          </p>
+          <ul className="mt-2.5 flex flex-col gap-1.5">
+            {SUGGESTED_PROMPTS.map((prompt) => (
+              <li
+                key={prompt}
+                className="border-l border-rule pl-2.5 text-[0.8125rem] leading-snug text-pretty text-ink-soft"
+              >
+                “{prompt}”
+              </li>
+            ))}
+          </ul>
 
-          {polyfilled && (
-            <>
-              <p className="mt-2.5 text-[0.8125rem] leading-relaxed text-pretty text-ink-soft">
-                This browser doesn&apos;t natively support WebMCP, so these
-                tools are only registered locally — nothing has confirmed an
-                agent is watching yet.
-              </p>
-              {troubleshooting}
-            </>
-          )}
-
-          {!ready && (
-            <>
-              <p className="mt-2.5 text-[0.8125rem] leading-relaxed text-pretty text-ink-soft">
-                This browser did not expose a WebMCP host, so an agent can only
-                read the page. Everything here works by hand regardless.
-              </p>
-              {troubleshooting}
-            </>
-          )}
+          <p className="mt-3 border-t border-rule pt-3 text-[0.8125rem] leading-relaxed text-pretty text-ink-soft">
+            Open this page in ChatGPT&apos;s in-app browser, or Chrome with
+            WebMCP enabled, to let an agent use these tools.
+          </p>
 
           <ul className="mt-4 flex flex-col gap-1.5 border-t border-rule pt-3">
             {names.map((name) => (
@@ -208,13 +171,6 @@ export function AgentIndicator() {
               </li>
             ))}
           </ul>
-
-          {ready && (
-            <p className="mt-3 border-t border-rule pt-3 text-[0.75rem] leading-relaxed text-ink-faint">
-              Runs entirely in this browser — your list lives in localStorage;
-              only Open Library ever sees a network request.
-            </p>
-          )}
 
           {activity.length > 0 && (
             <ol className="mt-3 flex flex-col gap-1.5 border-t border-rule pt-3">
@@ -237,13 +193,6 @@ export function AgentIndicator() {
                 </li>
               ))}
             </ol>
-          )}
-
-          {ready && (
-            <p className="u-meta mt-3 text-ink-faint">
-              via {status.namespace}.modelContext · {status.mode}
-              {polyfilled ? " · polyfilled" : ""}
-            </p>
           )}
         </div>
       )}
