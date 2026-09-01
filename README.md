@@ -6,7 +6,7 @@ you gave up on — and exposes all of it to AI agents as
 
 Built for the [WebMCP Challenge](https://webmcp.devpost.com).
 
-> **Live demo:** _(deploy pending)_ · **Video:** _(pending)_
+> **Live demo:** <https://tbr-navy.vercel.app> · **Video:** _(pending)_
 
 ---
 
@@ -206,14 +206,16 @@ is no backend, no API route and no server data — Open Library is called from t
 browser and the library lives in `localStorage` — so `npm run build` emits
 `out/` (~1.4MB) and that directory is the whole site.
 
-That makes it portable to any of the hackathon's accepted hosts. The intended
-target is **ChatGPT Sites**; `out/` also deploys as-is to Vercel, Netlify,
-Cloudflare Pages or Render.
+That makes it portable to any of the hackathon's accepted hosts. **Deployed on
+Vercel** — `vercel --prod` pushes `out/` directly, no server config needed.
+ChatGPT Sites was considered and dropped (regional availability and
+access-default risk weren't worth it against the deadline); `out/` deploys
+just as easily to Netlify, Cloudflare Pages or Render if that ever changes.
 
 Whatever the host, WebMCP needs a **secure context**, so the site must be served
 over HTTPS with no login wall in front of it. Deployment notes and the
 compatibility reasoning are in
-[docs/05-architecture.md](docs/05-architecture.md#deployment-chatgpt-sites).
+[docs/05-architecture.md](docs/05-architecture.md#decision-vercel-not-chatgpt-sites).
 
 ## Docs
 

@@ -239,13 +239,12 @@ Worth settling, because it looks like it might. It does not:
 So the only thing hosting can do is *lose* marks, by failing on Execution if the
 URL does not work when a judge opens it. Choose for reliability, nothing else.
 
-### Recommendation: deploy to both, submit the reliable one
+### Decision: Vercel, not ChatGPT Sites
 
-The build is a portable static export, so a second host costs one command. Put
-the provably-reachable URL on the submission form and treat ChatGPT Sites as a
-bonus if it works.
-
-**ChatGPT Sites** carries three risks, none fatal but all real:
+**Deployed.** TBR is live on Vercel — see the README for the URL. ChatGPT
+Sites was investigated and dropped before submission, on the strength of the
+three risks below; none were fatal individually, but together they weren't
+worth carrying against a deadline when Vercel has none of them:
 
 1. **Regional availability.** Reported as unavailable in the EEA, Switzerland
    and the UK. The official docs neither confirm nor deny it, and this project
@@ -257,14 +256,15 @@ bonus if it works.
    worst outcome available to this project.
 3. **Maturity.** It shipped in July 2026 and is in public beta.
 
-Its genuine upside is narrative rather than mechanical: it is OpenAI's own
-surface, and Sites documents native support for site tools. Nice to mention;
-not worth the submitted URL depending on it.
+Its genuine upside was narrative rather than mechanical: it is OpenAI's own
+surface, and Sites documents native support for site tools. Not worth the
+submitted URL depending on it, given no prize is tied to the hosting choice
+(see above).
 
-**Vercel or Netlify** are mature static hosts with no regional restriction and
-no access-control footgun. Either is a safe primary.
-
-Whichever is used, the artefact is identical — see below.
+**Vercel** is a mature static host with no regional restriction and no
+access-control footgun — the safe primary this project needed. The build is a
+portable static export, so nothing about this decision is permanent: `out/`
+deploys as-is to any other host in one command if that ever changes.
 
 ### Why the app is a static export
 
@@ -309,35 +309,30 @@ Two consequences worth remembering:
 
 ### Deploying
 
-Sites accepts an existing project: *"Deploy this project with Sites. Check
-whether it is compatible, make any required changes, and give me the deployment
-URL."* Point it at the repo, and at `out/` as the artefact.
+`vercel --prod` builds and pushes `out/` directly — no server config needed,
+since the artefact is plain static files. The project is already linked
+(`.vercel/project.json`), so a redeploy after any future change is that one
+command.
 
 Checks that matter for this app specifically:
 
-- [ ] The site is served over **HTTPS** — WebMCP requires a secure context
-- [ ] **No login or interstitial** in front of the page
-- [ ] Tools register from the **top-level page**, never an iframe (ChatGPT does
+- [x] The site is served over **HTTPS** — WebMCP requires a secure context
+- [x] **No login or interstitial** in front of the page
+- [x] Tools register from the **top-level page**, never an iframe (ChatGPT does
       not discover tools inside iframes)
-- [ ] `covers.openlibrary.org` and `openlibrary.org` are reachable from the
-      browser — both send `access-control-allow-origin: *`, but a restrictive
-      host CSP would block them
+- [x] `covers.openlibrary.org` and `openlibrary.org` are reachable from the
+      browser — both send `access-control-allow-origin: *`, and Vercel sets no
+      CSP by default
 - [ ] Open the deployed URL in the ChatGPT browser and confirm the agent
-      indicator reads **"7 tools live"**
-
-### If deploying to Sites
-
-- [ ] Confirm the plan and region allow it (see the risks above)
-- [ ] Set sharing to **"anyone on the Internet"** and verify the URL in a
-      private window, signed out of ChatGPT entirely
+      indicator reads **"7 tools live"** — do this against the live Vercel URL,
+      not just localhost
 
 ## Deployment checklist
 
-- [ ] Custom-ish domain, HTTPS (WebMCP requires a secure context)
-- [ ] No login, no cookie wall, no interstitial
-- [ ] Origin-isolated; do **not** set `document.domain`
-- [ ] Tools registered from the **top-level page**, never an iframe
+- [x] HTTPS, publicly reachable, no login or interstitial (Vercel default)
+- [x] Origin-isolated; do **not** set `document.domain`
+- [x] Tools registered from the **top-level page**, never an iframe
   (ChatGPT does not discover tools in iframes)
-- [ ] `tools` Permissions Policy defaults to `self` — do not override it
+- [x] `tools` Permissions Policy defaults to `self` — do not override it
 - [ ] Verify on a **cold profile** with empty `localStorage`, in the ChatGPT
       in-app browser, on a machine that never ran the dev server

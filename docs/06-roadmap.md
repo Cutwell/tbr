@@ -116,13 +116,20 @@ and a UI fix) against `origin` = `https://github.com/Cutwell/tbr`. The final
 run from the sandboxed environment that made the commits.
 
 - [x] Commit the work in reviewable chunks
-- [ ] `git push -u origin main` (from an authenticated machine)
-- [ ] Confirm `LICENSE` is present at the root and the repo is **public**
+- [x] `git push -u origin main` — pushed, after rebasing onto the repo's real
+      prior history and resolving an Apache-vs-MIT `LICENSE` conflict in
+      MIT's favour (the docs' own requirement)
+- [x] Confirm `LICENSE` is present at the root and the repo is **public**
+      (verified: unauthenticated `git ls-remote` succeeds)
 
 ### 2. Deploy, and verify the live URL
-- [ ] Deploy to ChatGPT Sites (**check UK availability first** — see
-      [05](05-architecture.md#-availability--verify-before-relying-on-this))
-- [ ] Keep a fallback host configured; `out/` deploys as-is to Vercel or Netlify
+**Decision made: Vercel, not ChatGPT Sites.** See
+[05-architecture.md](05-architecture.md#decision-vercel-not-chatgpt-sites) for
+the reasoning — three real-if-non-fatal risks (UK/EEA availability, the
+public-sharing default, beta maturity) weren't worth carrying against this
+deadline.
+
+- [x] Deploy to Vercel — see [README.md](../README.md) for the live URL
 - [ ] Open the deployed URL in the ChatGPT browser on a **cold profile** and
       confirm the indicator reads "7 tools live"
 - [ ] Walk A1, A2 and A3 end to end against the deployed site
