@@ -13,7 +13,7 @@ import { tools } from "@/lib/webmcp/tools";
 /**
  * One-time tool registration, plus the status the UI reports.
  *
- * TBR registers all seven tools once at start-up and never re-registers. That
+ * TBR registers all eight tools once at start-up and never re-registers. That
  * is a deliberate simplification: `registerTool` is additive while
  * `provideContext` replaces the whole set, so any state-dependent toolset would
  * have to be correct under both semantics. State-varying tools would buy
