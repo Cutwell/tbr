@@ -133,7 +133,9 @@ export function AgentIndicator() {
             ready && lastCall && "animate-pulse-once",
           )}
         />
-        Agent
+        <span className={cn(status.state === "unsupported" && "line-through")}>
+          Agent
+        </span>
       </button>
 
       {open && (
