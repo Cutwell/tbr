@@ -1,6 +1,7 @@
 import type { Book, BookPatch, LibraryQuery, NewBook, Shelf } from "@/lib/types";
 import { SHELVES } from "@/lib/types";
 import { buildTasteProfile } from "@/lib/store/profile";
+import { today } from "@/lib/utils/date";
 import { seedLibrary } from "@/lib/store/seed";
 
 /**
@@ -181,10 +182,16 @@ function add(input: NewBook): { book: Book; duplicate: boolean } {
   if (existing) return { book: existing, duplicate: true };
 
   const timestamp = nowIso();
+  const shelf = input.shelf ?? "tbr";
   const book: Book = {
     ...input,
     id: createId(),
-    shelf: input.shelf ?? "tbr",
+    shelf,
+    // "I just finished this, add it" arrives here as a direct add to `read`,
+    // never as a move, so the stamp has to happen on this path too. An
+    // explicit date on the input still wins — that is what lets the CSV
+    // importer supply Goodreads' own Date Read.
+    endedAt: input.endedAt ?? (shelf === "tbr" ? undefined : today()),
     addedAt: timestamp,
     updatedAt: timestamp,
   };
@@ -203,6 +210,31 @@ function update(id: string, patch: BookPatch): Book | null {
   if (patch.shelf !== undefined) next.shelf = patch.shelf;
   if (patch.rating !== undefined) next.rating = patch.rating;
   if (patch.note !== undefined) next.note = patch.note;
+
+  /*
+   * Stamp the end date, but only on a deliberate shelf move.
+   *
+   * The gate is `patch.shelf !== undefined` rather than "the book is now on
+   * read". Rating a book you finished last year is an update to a `read` book,
+   * and it must not silently restamp the date to today — that is the whole
+   * failure this condition exists to prevent.
+   *
+   * Within a shelf move: leaving for `tbr` clears the date, because a book you
+   * intend to read has not ended. Arriving from `tbr` sets today. Moving
+   * between `read` and `dnf` keeps whatever date is already there, since the
+   * book ended once and only the verdict changed — unless there is no date at
+   * all, in which case there is nothing to preserve.
+   */
+  if (patch.shelf !== undefined) {
+    if (patch.shelf === "tbr") next.endedAt = undefined;
+    else if (current.shelf === "tbr" || !current.endedAt) next.endedAt = today();
+  }
+
+  // An explicit date always wins over the automatic stamp above; `null` is the
+  // caller saying "clear it", which `undefined` cannot express.
+  if (patch.endedAt !== undefined) {
+    next.endedAt = patch.endedAt === null ? undefined : patch.endedAt;
+  }
 
   markTouched([id]);
   commit(books.map((book) => (book.id === id ? next : book)));
@@ -235,10 +267,15 @@ function addMany(inputs: NewBook[]): { added: number; duplicates: number } {
       duplicates += 1;
       continue;
     }
+    const shelf = input.shelf ?? "tbr";
     next.unshift({
       ...input,
       id: createId(),
-      shelf: input.shelf ?? "tbr",
+      shelf,
+      // A Goodreads export carries its own Date Read, and using it matters:
+      // stamping today on a 200-book import would claim the reader finished
+      // every one of them this afternoon. Today is only the fallback.
+      endedAt: input.endedAt ?? (shelf === "tbr" ? undefined : today()),
       addedAt: timestamp,
       updatedAt: timestamp,
     });

@@ -881,5 +881,17 @@ function createId(): string {
 }
 
 export function seedLibrary(): Book[] {
-  return SEED.map((book) => ({ ...book, id: createId() }));
+  return SEED.map((book) => ({
+    ...book,
+    id: createId(),
+    // Every finished or abandoned book gets its end date from `updatedAt`,
+    // which for this curated set *is* the day it was closed. Derived here
+    // rather than written into the list above, because the list is generated
+    // and would lose the column on the next regeneration.
+    //
+    // Slicing the string is safe where building a Date would not be: these are
+    // authored as midnight UTC, so the first ten characters are exactly the
+    // intended day, with no timezone to shift it.
+    endedAt: book.shelf === "tbr" ? undefined : book.updatedAt.slice(0, 10),
+  }));
 }

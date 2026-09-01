@@ -1,5 +1,6 @@
 import { library } from "@/lib/store/store";
 import { asRating, type Shelf } from "@/lib/types";
+import { isIsoDate } from "@/lib/utils/date";
 
 /**
  * Goodreads CSV import.
@@ -10,7 +11,7 @@ import { asRating, type Shelf } from "@/lib/types";
  * now has one caller: `ImportPanel`. It lives beside `seed.ts` because both do
  * the same job, bulk-loading records into the store from outside.
  *
- * Deliberately minimal. It reads four columns and ignores every other thing
+ * Deliberately minimal. It reads five columns and ignores every other thing
  * Goodreads exports, which is most of them.
  */
 
@@ -54,6 +55,39 @@ const GOODREADS_SHELF: Record<string, Shelf> = {
   dnf: "dnf",
 };
 
+const MONTHS = "jan feb mar apr may jun jul aug sep oct nov dec".split(" ");
+
+/**
+ * Goodreads' `Date Read` to `YYYY-MM-DD`.
+ *
+ * Exports use `2019/03/12` in some accounts and `Mar 12, 2019` in others,
+ * depending on the locale the export was generated under, and the column is
+ * routinely blank for books still on to-read. Anything unrecognised returns
+ * `undefined` and falls back to the store's own stamping: a wrong reading date
+ * is worse than an absent one.
+ */
+function parseGoodreadsDate(raw: string | undefined): string | undefined {
+  const value = raw?.trim();
+  if (!value) return undefined;
+
+  const numeric = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/.exec(value);
+  if (numeric) {
+    const [, y, m, d] = numeric;
+    const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    return isIsoDate(iso) ? iso : undefined;
+  }
+
+  const named = /^([a-z]{3})[a-z]*\s+(\d{1,2}),?\s+(\d{4})$/i.exec(value);
+  if (named) {
+    const month = MONTHS.indexOf(named[1].toLowerCase());
+    if (month === -1) return undefined;
+    const iso = `${named[3]}-${`${month + 1}`.padStart(2, "0")}-${named[2].padStart(2, "0")}`;
+    return isIsoDate(iso) ? iso : undefined;
+  }
+
+  return undefined;
+}
+
 export interface ImportOutcome {
   added: number;
   duplicates: number;
@@ -69,6 +103,7 @@ export function importGoodreadsCsv(csv: string): ImportOutcome {
   const authorAt = headers.findIndex((header) => header === "author" || header.includes("author"));
   const shelfAt = headers.findIndex((header) => header.includes("shelf"));
   const ratingAt = headers.findIndex((header) => header.includes("my rating"));
+  const readAt = headers.findIndex((header) => header === "date read");
 
   if (titleAt === -1) return { added: 0, duplicates: 0, skipped: lines.length - 1 };
 
@@ -91,6 +126,7 @@ export function importGoodreadsCsv(csv: string): ImportOutcome {
       author: (authorAt === -1 ? "" : cells[authorAt]) || "Unknown",
       shelf: GOODREADS_SHELF[rawShelf] ?? "tbr",
       rating,
+      endedAt: readAt === -1 ? undefined : parseGoodreadsDate(cells[readAt]),
     });
   }
 

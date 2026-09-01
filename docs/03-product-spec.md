@@ -48,8 +48,11 @@ signal, and the profile uses it.
 
 Goodreads exports CSV. File upload with column mapping represents roughly half a
 day of work for a journey that occupies a few seconds of demonstration, so the
-scope is a paste-a-CSV field reading the three relevant columns (`Title`,
-`Author`, `Exclusive Shelf`) and ignoring the rest.
+scope is a paste-a-CSV field reading the relevant columns (`Title`, `Author`,
+`Exclusive Shelf`, `My Rating`, `Date Read`) and ignoring the rest. `Date Read`
+is parsed in both formats Goodreads exports and falls back to today only when it
+is blank or unreadable — stamping today across a 200-book import would claim the
+reader finished their whole history that afternoon.
 
 ## Agent journeys
 
@@ -113,10 +116,25 @@ interface Book {
   shelf: Shelf;
   rating?: 1 | 2 | 3 | 4 | 5;
   note?: string;           // free text; why the book is on the list
-  addedAt: string;         // ISO
-  updatedAt: string;       // ISO
+  endedAt?: string;        // "YYYY-MM-DD" — the day it was finished or abandoned
+  addedAt: string;         // ISO instant
+  updatedAt: string;       // ISO instant
 }
 ```
+
+`endedAt` is the one field that is a calendar date rather than an instant, and
+the distinction is deliberate. `addedAt` and `updatedAt` record when the
+software did something; `endedAt` records a day a person picked, and can be
+edited on the book page. Storing it as a timestamp would mean "12 March" chosen
+in UTC+13 comes back as 11 March once normalised through UTC — verified: under
+`America/Los_Angeles`, `new Date("2019-01-01")` formats as *31 December 2018*.
+There is no hour of the day worth keeping to justify that. It is also the format
+`<input type="date">` reads and writes, and the one Goodreads exports.
+
+One field covers both shelves because it records the same event either way, and
+the shelf already says which it was — the UI reads it as "Finished" on `read`
+and "Gave up" on `dnf`. It is absent on `tbr`, and cleared when a book moves
+back there: a book you intend to read has not ended.
 
 Omissions and their rationale:
 
@@ -130,6 +148,10 @@ Omissions and their rationale:
 - **`author` is a string rather than an array.** The value is `author_name[0]`.
   Multi-author works are rare in a reading list and do not justify the added
   complexity.
+- **No start date, only an end date.** "When did you finish it" is answerable
+  from memory; "when did you start" usually is not, and a field readers cannot
+  fill honestly is worse than no field. `endedAt` is also the one the shelf
+  already implies a value for, which is what makes automatic stamping safe.
 
 ## Screens
 
@@ -140,7 +162,7 @@ Four routes, all statically exported.
 | `/` | The shelf: filter chips, book grid, and — on an empty library — the first-run panel. The default view. |
 | `/search` | Catalogue search, add, and the CSV paste field |
 | `/taste` | The reading profile, over the same data `get_taste_profile` returns |
-| `/book?id=` | A single book: synopsis, subjects, shelf, rating |
+| `/book?id=` | A single book: synopsis, subjects, shelf, rating, and the finished/gave-up date |
 
 `/book` accepts a query parameter rather than a dynamic segment because a static
 export cannot serve `/book/[id]` without enumerating ids at build time, and book

@@ -15,6 +15,7 @@ import { notify } from "@/lib/store/notifications";
 import { library } from "@/lib/store/store";
 import { useLibrary } from "@/lib/store/useLibrary";
 import { SHELVES, type CatalogResult, type Rating, type Shelf } from "@/lib/types";
+import { isIsoDate, today } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -163,6 +164,17 @@ function BookDetail() {
     if (book) library.update(book.id, { rating });
   }
 
+  /**
+   * The date input hands back "" when cleared, which has to become an explicit
+   * `null` — `undefined` would mean "leave it alone" and the field would be
+   * unclearable. Anything malformed is ignored rather than stored.
+   */
+  function setEndedAt(value: string) {
+    if (!book) return;
+    if (value === "") library.update(book.id, { endedAt: null });
+    else if (isIsoDate(value)) library.update(book.id, { endedAt: value });
+  }
+
   /** Adding flips this page into its owned state — `book` becomes defined. */
   function addToList() {
     if (!catalogResult) return;
@@ -257,6 +269,27 @@ function BookDetail() {
                   <p className="u-meta mb-2 text-ink-faint">Rating</p>
                   <StarRating value={book.rating} onChange={setRating} size={20} />
                 </div>
+
+                {/* Only for a book that has ended. A "finished on" date on a
+                    book you have not started is a field with no answer. */}
+                {book.shelf !== "tbr" && (
+                  <div>
+                    <label
+                      htmlFor="ended-at"
+                      className="u-meta mb-2 block text-ink-faint"
+                    >
+                      {book.shelf === "read" ? "Finished" : "Gave up"}
+                    </label>
+                    <input
+                      id="ended-at"
+                      type="date"
+                      value={book.endedAt ?? ""}
+                      max={today()}
+                      onChange={(event) => setEndedAt(event.target.value)}
+                      className="u-meta u-tnum rounded-[3px] border border-rule-strong bg-paper px-2.5 py-1.5 text-ink transition-colors duration-150 hover:border-ink-faint focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-4">

@@ -8,6 +8,7 @@ import { SHELF_SHORT } from "@/components/molecules/ShelfBadge";
 import { StarRating } from "@/components/molecules/StarRating";
 import { SHELVES, type Book, type Rating, type Shelf } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
+import { formatDate } from "@/lib/utils/date";
 
 interface BookCardProps {
   book: Book;
@@ -49,6 +50,7 @@ export function BookCard({
   onRemove,
 }: BookCardProps) {
   const articleRef = useRef<HTMLElement>(null);
+  const ended = formatDate(book.endedAt);
 
   // Scrolls a book into view the moment it is highlighted — the pulse means
   // nothing if the card it is on is off-screen, which is exactly the case a
@@ -144,6 +146,13 @@ export function BookCard({
             )}
           />
         </div>
+
+        {/* Kept at a fixed height and rendered even when empty, for the same
+            reason as the row above: a shelf mixing finished and to-read books
+            would otherwise have cards of two different heights. */}
+        <p className="u-meta u-tnum h-4 text-ink-faint">
+          {ended && `${book.shelf === "read" ? "Finished" : "Gave up"} ${ended}`}
+        </p>
       </div>
     </article>
   );

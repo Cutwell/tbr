@@ -41,6 +41,23 @@ export interface Book {
   rating?: Rating;
   /** Free text: why it is on the list. */
   note?: string;
+  /**
+   * The day the book stopped being read — finished, or given up on.
+   *
+   * One field for both, because it records the same event either way and the
+   * shelf already says which it was: the UI reads it as "Finished" on `read`
+   * and "Gave up" on `dnf`. Absent on `tbr`, and cleared when a book moves
+   * back there — a book you intend to read has not ended.
+   *
+   * A plain `YYYY-MM-DD` calendar date, deliberately *not* an ISO instant like
+   * `addedAt` and `updatedAt`. Those record when the software did something;
+   * this records a day a person picked. Storing it as a timestamp would mean
+   * "12 March" chosen in UTC+13 comes back as 11 March once it is normalised
+   * through UTC, and there is no hour of the day worth keeping to justify the
+   * risk. It is also exactly what `<input type="date">` reads and writes, and
+   * what Goodreads exports.
+   */
+  endedAt?: string;
   addedAt: string;
   updatedAt: string;
 }
@@ -65,7 +82,17 @@ export type NewBook = Omit<Book, "id" | "addedAt" | "updatedAt" | "shelf"> & {
   shelf?: Shelf;
 };
 
-export type BookPatch = Partial<Pick<Book, "shelf" | "rating" | "note">>;
+/**
+ * A partial update. `undefined` means "leave alone" throughout.
+ *
+ * `endedAt` additionally accepts `null`, meaning "clear it" — the one field a
+ * caller needs to be able to unset deliberately, since `undefined` is already
+ * spoken for. Passing it at all overrides the automatic stamping in
+ * `store.update`.
+ */
+export type BookPatch = Partial<Pick<Book, "shelf" | "rating" | "note">> & {
+  endedAt?: string | null;
+};
 
 /**
  * Aggregated reading taste, computed on the site rather than by the agent.
