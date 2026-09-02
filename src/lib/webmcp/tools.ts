@@ -434,9 +434,12 @@ const updateBookTool: ToolDescriptor = {
     "rating, or replace its note. Any field left out is unchanged. When the " +
     "reader says they finished a book or gave up on one, call search_my_books " +
     "to find its book_id, then set the shelf and the rating here in a single " +
-    "call. Moving to read or dnf records today as the date it ended; pass " +
-    "finished_on when the reader names a different day. A successful update " +
-    "automatically shows that book to the reader.",
+    "call. Rating a book that is still on tbr moves it to read on its own, so " +
+    "there is no need to pass status as well — pass status only when the shelf " +
+    "differs from that, such as rating a book the reader abandoned. Moving to " +
+    "read or dnf records today as the date it ended; pass finished_on when the " +
+    "reader names a different day. A successful update automatically shows " +
+    "that book to the reader.",
   inputSchema: {
     type: "object",
     properties: {
@@ -450,7 +453,9 @@ const updateBookTool: ToolDescriptor = {
         type: "integer",
         minimum: 1,
         maximum: 5,
-        description: "Star rating from 1 to 5. Omit to leave the rating unchanged.",
+        description:
+          "Star rating from 1 to 5. Omit to leave the rating unchanged. " +
+          "Rating a book that is on tbr also moves it to the read shelf.",
       },
       note: { type: "string", description: "Replacement note. Omit to leave the note unchanged." },
       finished_on: {
@@ -549,7 +554,13 @@ const updateBookTool: ToolDescriptor = {
       // A book the reader still intends to read has no end date, and the store
       // clears the field on any move to tbr — so accepting one here would write
       // a value that the same call immediately contradicts.
-      if ((shelf ?? target.shelf) === "tbr") {
+      //
+      // A rating counts towards where the book ends up: rating a tbr book moves
+      // it to read (store.ts), which makes "I finished this last Tuesday, four
+      // stars" a legal single call rather than an error telling the agent to
+      // state a shelf it has already implied.
+      const endsOn = shelf ?? (rating && target.shelf === "tbr" ? "read" : target.shelf);
+      if (endsOn === "tbr") {
         return err(
           `"${target.title}" would end up on the tbr shelf, which has no finish date.`,
           'Pass status "read" or "dnf" alongside finished_on.',
@@ -563,7 +574,11 @@ const updateBookTool: ToolDescriptor = {
     }
 
     const changes = [
-      shelf ? `moved to ${shelf}` : null,
+      // Read off the result rather than the request, because the shelf can move
+      // without being asked for: rating a tbr book promotes it to read. An
+      // agent told only "rated 4*" while the shelf changed underneath it will
+      // go on to "correct" something that was already right.
+      updated.shelf !== target.shelf ? `moved to ${updated.shelf}` : null,
       rating ? `rated ${rating}*` : null,
       note ? "note updated" : null,
       // Reported only when the agent set it. The automatic stamp is not a

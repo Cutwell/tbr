@@ -159,14 +159,14 @@ src/app/
   page.tsx          the shelf
   search/           catalogue search, add, Goodreads import
   taste/            the reading profile
-  book/             one book: synopsis, subjects, shelf and rating.
+  book/             one book: synopsis, subjects, shelf, rating and date.
                     `?id=` is a shelf id or an Open Library work key, so a
                     search result and a shelf card lead to the same page
 
 src/components/
   atoms/       Button  Chip  Icon  IconButton  ShelfDot  Spinner  Star  TextInput
   molecules/   BookCover  EmptyState  FilterBar  NavLink  SearchField
-               ShelfBadge  StarRating  StatFigure  ThemeToggle
+               ShelfBadge  SortControl  StarRating  StatFigure  ThemeToggle
   organisms/   AgentIndicator  BookCard  BookGrid  ConfirmDialog  FirstRunPanel
                ImportPanel  NavigationController  SiteHeader  TasteProfile
                ToastStack
@@ -174,9 +174,10 @@ src/components/
 
 src/lib/
   store/       store  profile  seed  goodreads  notifications  confirmations
-               useLibrary
+               navigation  shelfView  useLibrary
   catalog/     openlibrary  cache                   ← Open Library client
   webmcp/      adapter  tools  format  input  register  activity
+  utils/       cn  date  shelfDate  useHydrated
 ```
 
 Pages hold the data and components hold none of it. `AppShell` performs start-up

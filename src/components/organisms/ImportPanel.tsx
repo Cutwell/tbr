@@ -6,9 +6,9 @@ import { Icon } from "@/components/atoms/Icon";
 import { importGoodreadsCsv } from "@/lib/store/goodreads";
 import { notify } from "@/lib/store/notifications";
 
-const SAMPLE = `Title,Author,Exclusive Shelf,My Rating,Date Read
-The Wall,Marlen Haushofer,to-read,0,
-Stoner,John Williams,read,5,2024/11/03`;
+const SAMPLE = `Title,Author,Exclusive Shelf,My Rating,Date Read,Date Added
+The Wall,Marlen Haushofer,to-read,0,,2025/04/26
+Stoner,John Williams,read,5,2024/11/03,2024/09/14`;
 
 /**
  * Goodreads CSV import.
@@ -49,8 +49,9 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
     <section className="animate-rise border border-rule bg-paper-raised p-6 md:p-8">
       <h2 className="font-display text-2xl text-ink">Import a reading list</h2>
       <p className="mt-1.5 max-w-prose text-sm text-pretty text-ink-soft">
-        Paste a Goodreads CSV export. TBR reads the Title, Author, Exclusive
-        Shelf, My Rating and Date Read columns and ignores everything else.
+        Paste a Goodreads CSV export, whole — all twenty-three columns, reviews
+        and line breaks included. TBR reads Title, Author, Exclusive Shelf,
+        Bookshelves, My Rating, Date Read and Date Added, and ignores the rest.
         Books already on your shelves are skipped, not duplicated.
       </p>
 

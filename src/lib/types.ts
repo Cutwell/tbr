@@ -78,19 +78,37 @@ export interface LibraryQuery {
   limit?: number;
 }
 
+/**
+ * A book on its way in.
+ *
+ * `addedAt` is optional rather than absent: the store stamps now, which is
+ * right for every path except a Goodreads import, where the file carries the
+ * day the reader actually added each book. Stamping now there would tell a
+ * reader with a decade of history that they added all two hundred books this
+ * afternoon — and the shelf now shows that date on every unread card.
+ */
 export type NewBook = Omit<Book, "id" | "addedAt" | "updatedAt" | "shelf"> & {
   shelf?: Shelf;
+  addedAt?: string;
 };
 
 /**
  * A partial update. `undefined` means "leave alone" throughout.
  *
- * `endedAt` additionally accepts `null`, meaning "clear it" — the one field a
- * caller needs to be able to unset deliberately, since `undefined` is already
- * spoken for. Passing it at all overrides the automatic stamping in
- * `store.update`.
+ * Which is why the two erasable fields accept `null` as well: one sentinel
+ * cannot mean both "I am not touching this" and "set this back to nothing", and
+ * every caller here needs both. `null` is the second meaning.
+ *
+ *   `rating`  a reader taking back a star rating — `StarRating` clears by
+ *             clicking the current value, and there is no other way to say so.
+ *   `endedAt` clearing a finish date. Passing it at all also overrides the
+ *             automatic stamping in `store.update`.
+ *
+ * `shelf` and `note` are absent from this list deliberately. A book is always
+ * on some shelf, and an empty string is a perfectly good empty note.
  */
-export type BookPatch = Partial<Pick<Book, "shelf" | "rating" | "note">> & {
+export type BookPatch = Partial<Pick<Book, "shelf" | "note">> & {
+  rating?: Rating | null;
   endedAt?: string | null;
 };
 

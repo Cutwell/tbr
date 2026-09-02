@@ -27,10 +27,38 @@ Move a book to Read or DNF from the card, without a dialog. Moving to Read is
 the natural point at which to request a rating, so that prompt appears inline
 rather than as a separate journey.
 
-### J3 — Browse and filter
+### J3 — Browse, filter and arrange
 
 The shelf view provides filter chips for TBR, Read and DNF, each displaying a
 count. Counts cost little and convey the size of the library at a glance.
+
+TBR is the shelf a visit opens on, rather than everything. The question the
+application answers is "what should I read next?", and that answer is never on
+the read shelf. The filter, the search text and the ordering are held outside
+React in `shelfView.ts` and restored when the shelf page remounts, so opening a
+book and returning does not silently discard the view the reader had set up.
+
+The exception is a reader with nothing on TBR, who would otherwise open on "That
+shelf is empty" — a blank page in front of a library whose counts are visible
+right above it. They open on All. This cannot be decided when the page first
+renders, because the library hydrates on mount and every shelf is empty at that
+moment; it is settled on the first render where the library is known, and settled
+once per session rather than once per mount. Once matters: a reader who
+deliberately opens an empty TBR shelf and then opens a book must come back to
+the empty TBR shelf, not be returned to All. The fallback also never overrides a
+shelf that was picked, including one an agent asked for through `navigate_to`.
+
+Alongside the chips sits an ordering control with three options: **Recent**,
+the store's own newest-first order, which leaves a card where it is when it is
+edited; **A–Z** by title, filing under the first significant word so a third of
+the shelf does not pile up under *The*; and a date option that relabels itself
+to the date the current shelf actually carries — Added, Finished or Gave up.
+
+Each shelf shows one date per book, and which one depends on the shelf: how long
+a TBR book has been waiting, or the day a Read or DNF book was closed. Those
+come from two different fields — `addedAt` and `endedAt` — and only the second
+is editable, since the first records what the software did rather than a day the
+reader chose.
 
 ### J4 — Remove a book
 
@@ -44,15 +72,48 @@ One to five stars, available on any shelf. Rating a DNF book is permitted
 deliberately: a low rating attached to an abandoned book is a strong taste
 signal, and the profile uses it.
 
+Rating a book that is still on TBR moves it to Read and stamps today as the day
+it ended. A star on an unread book is two statements — "I read this" and "here
+is what I thought" — and making the reader say the first one separately is
+asking them to restate what they have already implied; forgetting to leaves a
+TBR shelf that lies about what is unread. It happens in the store, so an agent's
+`update_book` behaves identically, and `update_book` reports the move it did not
+ask for. Because the inference is the software's rather than the reader's, it
+raises a toast carrying an undo. Clearing a rating is a retraction and moves
+nothing.
+
 ### J6 — Import a reading list
 
 Goodreads exports CSV. File upload with column mapping represents roughly half a
 day of work for a journey that occupies a few seconds of demonstration, so the
-scope is a paste-a-CSV field reading the relevant columns (`Title`, `Author`,
-`Exclusive Shelf`, `My Rating`, `Date Read`) and ignoring the rest. `Date Read`
-is parsed in both formats Goodreads exports and falls back to today only when it
-is blank or unreadable — stamping today across a 200-book import would claim the
-reader finished their whole history that afternoon.
+scope is a paste-a-CSV field reading six columns and ignoring the other
+seventeen — but the parser is built for all twenty-three, and the schema is
+declared in full in `goodreads.ts`. Ignoring a column is not the same as being
+unaware of it, and two of the columns TBR never looks at are the ones most able
+to ruin an import:
+
+- **`My Review` and `Private Notes`** are free text, and Goodreads carries the
+  line breaks in them as quoted data. Splitting the file on newlines before
+  parsing therefore tears one book into several: the tail of a two-paragraph
+  review becomes its own row, and a fragment containing a comma parses as a
+  book. A newline ends a row only outside quotes, so the row split has to happen
+  inside the parser, which is the one thing that knows.
+- **`Bookshelves`** is where a DNF actually lives. Goodreads has no exclusive
+  shelf for a book you gave up on, so `Exclusive Shelf` alone can never produce
+  one; the reader tags a custom shelf instead, and that tag wins over the
+  exclusive shelf it contradicts. Abandonment is the strongest signal the taste
+  profile has, and without this column it would never arrive.
+
+Columns bind by exact name against that declared schema rather than by
+substring. The substring version worked only by accident: "Bookshelves" contains
+"shelve" and not "shelf", which is the sole reason it was not matched in place
+of "Exclusive Shelf".
+
+`Date Read` and `Date Added` are parsed in both formats Goodreads exports and
+fall back to the store's own stamping only when blank or unreadable — stamping
+today across a 200-book import would claim the reader finished their whole
+history, and filed all of it, that afternoon. `Date Added` matters more now that
+every unread card shows the day the book was added.
 
 ## Agent journeys
 
@@ -134,7 +195,9 @@ There is no hour of the day worth keeping to justify that. It is also the format
 One field covers both shelves because it records the same event either way, and
 the shelf already says which it was — the UI reads it as "Finished" on `read`
 and "Gave up" on `dnf`. It is absent on `tbr`, and cleared when a book moves
-back there: a book you intend to read has not ended.
+back there: a book you intend to read has not ended. A TBR book shows `addedAt`
+in that slot instead, which is why `shelfDate.ts` exists: one place that answers
+"which date does this book carry, and what is it called".
 
 Omissions and their rationale:
 
@@ -159,10 +222,10 @@ Four routes, all statically exported.
 
 | Route | Contents |
 |---|---|
-| `/` | The shelf: filter chips, book grid, and — on an empty library — the first-run panel. The default view. |
+| `/` | The shelf: filter chips, ordering control, book grid, and — on an empty library — the first-run panel. The default view, filtered to TBR. |
 | `/search` | Catalogue search, add, and the CSV paste field |
 | `/taste` | The reading profile, over the same data `get_taste_profile` returns |
-| `/book?id=` | A single book: synopsis, subjects, shelf, rating, and the finished/gave-up date |
+| `/book?id=` | A single book: synopsis, subjects, shelf, rating, and its date — the editable finished/gave-up day, or the day a TBR book was added |
 
 `/book` accepts a query parameter rather than a dynamic segment because a static
 export cannot serve `/book/[id]` without enumerating ids at build time, and book

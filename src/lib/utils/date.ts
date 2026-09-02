@@ -40,6 +40,25 @@ export function fromIsoDate(value: string): Date | null {
   return date.getMonth() === month - 1 && date.getDate() === day ? date : null;
 }
 
+/**
+ * A `YYYY-MM-DD` day to the ISO instant it began at, locally.
+ *
+ * The bridge in the other direction from `shelfDate`, and the only place a
+ * calendar date is allowed to become an instant. It exists for the Goodreads
+ * importer: `Date Added` is a day, `Book.addedAt` is an instant, and something
+ * has to choose which moment of that day to record.
+ *
+ * Local midnight rather than UTC midnight, so the value survives the round trip
+ * — `shelfDate` reads it back with local components and gets the same day out.
+ * Building it from the UTC end would land the day before for every reader west
+ * of Greenwich. Returns undefined for anything that is not a real date.
+ */
+export function instantAtStartOfDay(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const date = fromIsoDate(value);
+  return date ? date.toISOString() : undefined;
+}
+
 /** True for a well-formed, real calendar date. */
 export function isIsoDate(value: unknown): value is string {
   return typeof value === "string" && fromIsoDate(value) !== null;

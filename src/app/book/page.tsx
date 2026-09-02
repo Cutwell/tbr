@@ -16,6 +16,7 @@ import { library } from "@/lib/store/store";
 import { useLibrary } from "@/lib/store/useLibrary";
 import { SHELVES, type CatalogResult, type Rating, type Shelf } from "@/lib/types";
 import { isIsoDate, today } from "@/lib/utils/date";
+import { shelfDate } from "@/lib/utils/shelfDate";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -160,8 +161,27 @@ function BookDetail() {
     if (updated) notify({ message: `“${updated.title}” → ${SHELF_LABEL[shelf]}.` });
   }
 
+  /**
+   * Rating a book still on tbr moves it to read — the store does that, so the
+   * grid, this page and an agent all behave the same way (store.ts).
+   *
+   * The shelf buttons above re-render into their new state on their own, but a
+   * move the reader did not ask for still gets said out loud, with the way back
+   * attached.
+   */
   function setRating(rating: Rating | undefined) {
-    if (book) library.update(book.id, { rating });
+    if (!book) return;
+    const before = book;
+    // `undefined` from `StarRating` means "cleared", which the patch spells
+    // `null` — `undefined` there would mean "leave it alone". Same reasoning as
+    // `setEndedAt` below.
+    const updated = library.update(book.id, { rating: rating ?? null });
+    if (!updated || updated.shelf === before.shelf) return;
+
+    notify({
+      message: `“${updated.title}” rated — moved to ${SHELF_LABEL[updated.shelf]}.`,
+      action: { label: "Undo", run: () => library.update(before.id, { shelf: before.shelf }) },
+    });
   }
 
   /**
@@ -209,6 +229,14 @@ function BookDetail() {
 
   const backHref = book ? "/" : "/search";
   const backLabel = book ? "The shelf" : "Search";
+
+  /**
+   * Which date this book carries depends on its shelf — added, finished or
+   * gave up (see shelfDate.ts). The fallback is never rendered: every use of it
+   * below sits inside the branch that has already established `book`. It exists
+   * so the type stays non-nullable without an assertion.
+   */
+  const dated = book ? shelfDate(book) : { label: "", formatted: null };
 
   return (
     <article className="mx-auto w-full max-w-5xl">
@@ -270,6 +298,18 @@ function BookDetail() {
                   <StarRating value={book.rating} onChange={setRating} size={20} />
                 </div>
 
+                {/* A book on the tbr shelf shows when it was added instead —
+                    the useful fact about something unread is how long it has
+                    been waiting. It is text rather than an input because
+                    `addedAt` records what the software did, not a day the
+                    reader chose, so there is nothing honest to edit. */}
+                {book.shelf === "tbr" && dated.formatted && (
+                  <div>
+                    <p className="u-meta mb-2 text-ink-faint">{dated.label}</p>
+                    <p className="u-meta u-tnum py-1.5 text-ink-soft">{dated.formatted}</p>
+                  </div>
+                )}
+
                 {/* Only for a book that has ended. A "finished on" date on a
                     book you have not started is a field with no answer. */}
                 {book.shelf !== "tbr" && (
@@ -278,7 +318,7 @@ function BookDetail() {
                       htmlFor="ended-at"
                       className="u-meta mb-2 block text-ink-faint"
                     >
-                      {book.shelf === "read" ? "Finished" : "Gave up"}
+                      {dated.label}
                     </label>
                     <input
                       id="ended-at"

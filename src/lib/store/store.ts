@@ -190,9 +190,10 @@ function add(input: NewBook): { book: Book; duplicate: boolean } {
     // "I just finished this, add it" arrives here as a direct add to `read`,
     // never as a move, so the stamp has to happen on this path too. An
     // explicit date on the input still wins — that is what lets the CSV
-    // importer supply Goodreads' own Date Read.
-    endedAt: input.endedAt ?? (shelf === "tbr" ? undefined : today()),
-    addedAt: timestamp,
+    // importer supply Goodreads' own Date Read. A book landing on `tbr` gets no
+    // date at all, whatever the caller passed: it has not ended.
+    endedAt: shelf === "tbr" ? undefined : (input.endedAt ?? today()),
+    addedAt: input.addedAt ?? timestamp,
     updatedAt: timestamp,
   };
 
@@ -208,16 +209,42 @@ function update(id: string, patch: BookPatch): Book | null {
 
   const next: Book = { ...current, updatedAt: nowIso() };
   if (patch.shelf !== undefined) next.shelf = patch.shelf;
-  if (patch.rating !== undefined) next.rating = patch.rating;
+  // `null` is the reader taking a rating back; `undefined` is a caller not
+  // mentioning it. Collapsing the two would make the stars unclearable.
+  if (patch.rating !== undefined) next.rating = patch.rating ?? undefined;
   if (patch.note !== undefined) next.note = patch.note;
+
+  /*
+   * Rating a book you have not read moves it to `read`.
+   *
+   * You cannot rate a book you have not finished, so a star on a `tbr` book is
+   * really two statements: "I read this" and "here is what I thought". Making
+   * the reader say the first one separately — rate, then drag to the read
+   * shelf — is asking them to restate something they just implied, and the
+   * cost of forgetting is a shelf that quietly lies about what is unread.
+   *
+   * Three guards keep it from firing where it would be wrong:
+   *
+   *   - only when the patch carries no shelf of its own. An explicit shelf is
+   *     the caller being specific, and inference must never overrule it — that
+   *     is what makes "rate it 2 and mark it abandoned" work.
+   *   - only for a real rating, never a `null` clearing one. Taking a rating
+   *     back is a retraction, and a retraction must not move anything.
+   *   - only from `tbr`. Re-rating a book already on `read` or `dnf` says
+   *     nothing about where it belongs.
+   */
+  const promoted =
+    current.shelf === "tbr" && patch.shelf === undefined && patch.rating != null;
+  if (promoted) next.shelf = "read";
 
   /*
    * Stamp the end date, but only on a deliberate shelf move.
    *
-   * The gate is `patch.shelf !== undefined` rather than "the book is now on
+   * The gate is "this call moved the book" rather than "the book is now on
    * read". Rating a book you finished last year is an update to a `read` book,
    * and it must not silently restamp the date to today — that is the whole
-   * failure this condition exists to prevent.
+   * failure this condition exists to prevent. A promotion counts as a move: a
+   * book that just became `read` needs the same date any other arrival gets.
    *
    * Within a shelf move: leaving for `tbr` clears the date, because a book you
    * intend to read has not ended. Arriving from `tbr` sets today. Moving
@@ -225,8 +252,9 @@ function update(id: string, patch: BookPatch): Book | null {
    * book ended once and only the verdict changed — unless there is no date at
    * all, in which case there is nothing to preserve.
    */
-  if (patch.shelf !== undefined) {
-    if (patch.shelf === "tbr") next.endedAt = undefined;
+  const movedTo = patch.shelf ?? (promoted ? "read" : undefined);
+  if (movedTo !== undefined) {
+    if (movedTo === "tbr") next.endedAt = undefined;
     else if (current.shelf === "tbr" || !current.endedAt) next.endedAt = today();
   }
 
@@ -272,11 +300,12 @@ function addMany(inputs: NewBook[]): { added: number; duplicates: number } {
       ...input,
       id: createId(),
       shelf,
-      // A Goodreads export carries its own Date Read, and using it matters:
-      // stamping today on a 200-book import would claim the reader finished
-      // every one of them this afternoon. Today is only the fallback.
-      endedAt: input.endedAt ?? (shelf === "tbr" ? undefined : today()),
-      addedAt: timestamp,
+      // A Goodreads export carries its own Date Read and Date Added, and using
+      // them matters: stamping today on a 200-book import would claim the
+      // reader finished and filed every one of them this afternoon. Now is only
+      // the fallback, and a book on `tbr` has no end date to fall back to.
+      endedAt: shelf === "tbr" ? undefined : (input.endedAt ?? today()),
+      addedAt: input.addedAt ?? timestamp,
       updatedAt: timestamp,
     });
     added += 1;

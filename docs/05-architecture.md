@@ -73,9 +73,10 @@ src/components/  atoms → molecules → organisms → templates
 
 src/lib/
   store/     store  profile  seed  goodreads  notifications  confirmations
-             useLibrary
+             navigation  shelfView  useLibrary
   catalog/   openlibrary  cache
   webmcp/    adapter  tools  format  input  register  activity
+  utils/     cn  date  shelfDate  useHydrated
 ```
 
 Pages hold data; components hold none. `AppShell` performs start-up once per

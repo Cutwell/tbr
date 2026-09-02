@@ -8,7 +8,7 @@ import { SHELF_SHORT } from "@/components/molecules/ShelfBadge";
 import { StarRating } from "@/components/molecules/StarRating";
 import { SHELVES, type Book, type Rating, type Shelf } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
-import { formatDate } from "@/lib/utils/date";
+import { shelfDate } from "@/lib/utils/shelfDate";
 
 interface BookCardProps {
   book: Book;
@@ -50,7 +50,10 @@ export function BookCard({
   onRemove,
 }: BookCardProps) {
   const articleRef = useRef<HTMLElement>(null);
-  const ended = formatDate(book.endedAt);
+
+  // Which date a card shows follows its shelf: how long it has been waiting, or
+  // the day it was closed. See shelfDate.ts.
+  const dated = shelfDate(book);
 
   // Scrolls a book into view the moment it is highlighted — the pulse means
   // nothing if the card it is on is off-screen, which is exactly the case a
@@ -148,10 +151,11 @@ export function BookCard({
         </div>
 
         {/* Kept at a fixed height and rendered even when empty, for the same
-            reason as the row above: a shelf mixing finished and to-read books
-            would otherwise have cards of two different heights. */}
+            reason as the row above: a `read` book can lack a finish date — an
+            import without one, or one the reader cleared — and a grid of cards
+            at two different heights is worse than a blank line. */}
         <p className="u-meta u-tnum h-4 text-ink-faint">
-          {ended && `${book.shelf === "read" ? "Finished" : "Gave up"} ${ended}`}
+          {dated.formatted && `${dated.label} ${dated.formatted}`}
         </p>
       </div>
     </article>
