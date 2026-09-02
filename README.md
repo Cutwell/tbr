@@ -4,8 +4,7 @@ A reading list that you and an AI agent can use together. Track books you want
 to read, have finished, or gave up on; TBR exposes the same library to agents
 through [WebMCP](https://developer.chrome.com/docs/ai/webmcp).
 
-[Try the live demo](https://project-tbr.vercel.app) · Built for the
-[WebMCP Challenge](https://webmcp.devpost.com)
+[Try the live demo](https://project-tbr.vercel.app) · Built for the [WebMCP Challenge](https://webmcp.devpost.com) · Watch demo video on [YouTube](https://youtu.be/7HRfz-xouaQ)
 
 ## Why WebMCP fits
 
