@@ -2,24 +2,23 @@
 
 ## Governing constraint
 
-The deliverable is a public URL that works on first open, on an unfamiliar
-machine, within a five-day window. Every choice below optimises for that.
+The application must work on first open from a public URL without an account or
+server-side setup. Every choice below supports that constraint.
 
 ## Stack
 
 | Layer | Choice | Rationale |
 |---|---|---|
 | Framework | Next.js 16 (App Router), React 19, TypeScript | Statically exportable, deploys in one step, and `next/font` self-hosts the display faces. TypeScript is most valuable on the tool schemas, where a typo is undetectable until an agent misbehaves. |
-| Styling | Tailwind v4 | Highest visual return per hour, and Execution is a judged criterion. |
+| Styling | Tailwind v4 | Utility classes keep the visual system consistent without a runtime styling layer. |
 | State | External store with `useSyncExternalStore` | Tools and UI must mutate through one module so that agent writes re-render the page. |
 | Persistence | `localStorage` | No backend, no authentication, no login wall. |
 | Catalogue | Open Library, called client-side | CORS `*`, no API key. |
-| Hosting | Vercel | Mature static host without regional restrictions or access-control defaults that could block a judge. |
+| Hosting | Vercel | Serves the static export over HTTPS from a linked project. |
 
-The absence of a backend is a requirement rather than a simplification. Judges
-must open a URL and use it immediately; accounts introduce a login wall between
-the judge and the demonstration, and WebMCP tools requiring authentication are a
-substantially harder story to present in three minutes.
+The absence of a backend keeps the application immediately usable. There is no
+account or authentication boundary, and the WebMCP tools operate on the same
+browser-local library as the interface.
 
 ## The store as integration point
 
@@ -42,9 +41,9 @@ external store consumed through `useSyncExternalStore`, so writes originating
 outside React re-render the tree without bridging code.
 
 ```ts
-export const store = {
-  all(): Book[],
-  query(f: { shelf?, text?, minRating?, limit? }): Book[],
+export const library = {
+  all(): readonly Book[],
+  query(f: { shelf?, text?, minRating?, limit? }): { results: Book[], total: number },
   add(input): { book: Book, duplicate: boolean },
   update(id, patch): Book | null,
   remove(id): Book | null,
@@ -95,22 +94,15 @@ order permits an early tool call to read an empty store.
 
 All seven tools register together and are never re-registered
 ([04-tool-design.md](04-tool-design.md)). Where no host is available, the agent
-indicator reports "unsupported" and links to setup instructions. Judges are
-likely to open the URL in an ordinary browser first, and an explicit unsupported
+indicator reports "unsupported" and links to setup instructions. The explicit
 state distinguishes correct host detection from a broken page.
 
 ## First run, and the demo library
 
-A judge opening the URL with empty `localStorage` and asking what to read next
+A reader opening the URL with empty `localStorage` and asking what to read next
 would receive an accurate report of insufficient history from
 `get_taste_profile` and an empty result from `search_my_books`. The primary
 journey would produce nothing for the intended audience.
-
-For most of the build the answer was to seed 80 books automatically on first
-visit. That solved the demo problem and created a worse one: it filled a
-stranger's reading list with books they had never read, without asking, and in
-doing so hid the fact that the shelf is genuinely theirs. A reading list that
-arrives pre-populated is not a reading list.
 
 **The library now starts empty**, and the shelf renders `FirstRunPanel` in
 place of the grid: four real ways in, ordered so that the two which add the
@@ -123,7 +115,7 @@ reader's *own* books come first.
 | Import from Goodreads | `/search?import=1`, panel open on arrival |
 | Load the demo library | `library.loadDemo()` |
 
-The demo set is unchanged and still curated rather than random, so the profile
+The demo set is curated rather than random, so the profile
 has structure to find: a cluster of highly-rated Le Guin, one author abandoned
 repeatedly, a pronounced skew toward older speculative fiction, and enough TBR
 entries for a recommendation to constitute a real choice. Titles, years and
@@ -141,11 +133,9 @@ what makes a reset stick across a reload.
 
 ### Resetting
 
-Still no reset control in the interface, and for the original reason: a control
-that erases the reader's list does not belong in a reading list, and it invites
-accidental activation during a recording. But "delete the key in devtools" was
-a poor answer for the one audience that needs it, so the store exposes two
-functions on `window` in production:
+There is no reset control in the interface, where accidental activation would
+erase the reader's list. The store instead exposes two explicit console
+functions on `window`:
 
 ```js
 resetList()   // back to the empty first-run state
@@ -168,8 +158,8 @@ also CORS `*`.
 
 Findings from testing against the live API:
 
-- **`fields` is mandatory in practice.** Without it, a two-book response is
-  2,838 bytes, almost entirely ISBNs.
+- **`fields` is mandatory in practice.** Unprojected responses contain large
+  identifier arrays and other fields the application does not use.
 - **A bare work key matches nothing.** `q=OL3511459W` returns zero results; the
   index requires `q=key:/works/OL3511459W`. The failure is quiet and expensive:
   a caller interpreting "no match" as "use the supplied value" shelves a book
@@ -218,17 +208,9 @@ The point is now moot as well as prudent, since a static export has no image
 optimiser. The component is a plain `<img>` rather than `next/image`; native
 `loading="lazy"` and CSS supply everything the component would have added.
 
-A single rendition is used, with no `srcset`. This was attempted and reverted;
-the failure mode is recorded here because it is non-obvious. M measures
-180×294 (12KB) and L measures
-305×500 (26KB), so offering both appears to be a free saving on small screens.
-However, the browser re-selects a candidate once layout resolves `sizes`, and
-each re-selection aborts the in-flight request while reporting a successful
-`load` with `naturalWidth === 0`. Covers that had loaded correctly were driven
-into the typographic fallback, producing 9 of 80 rather than the true 3, and
-concentrated in the eagerly-loaded first row. One URL means one request and no
-re-selection. L is the default because a 190px grid cell on a 2× display
-requires approximately 380px, at which M visibly softens.
+A single large rendition is used without `srcset`. One stable URL avoids
+candidate re-selection during layout, while the typographic fallback handles
+works without cover art.
 
 ### Caching
 
@@ -242,69 +224,17 @@ is harmless.
 The cache fails soft in every direction. A cache that throws is worse than no
 cache, and the library must never lose its storage slot to one.
 
-### Measured performance
-
-Production build, cold cache, 80-book shelf.
-
-| Metric | Before | After |
-|---|---|---|
-| App shell (DOMContentLoaded) | 219ms | unchanged; never the bottleneck |
-| Route swap | 18ms | unchanged; never the bottleneck |
-| Cover, median | 430ms | unchanged per image |
-| `search.json` on reload | refetched every time | 0 requests |
-| Work detail on reload | refetched every time | 0 requests |
-
-Route swaps were never slow. Apparent slowness during development is Turbopack
-compiling routes on demand, so measurements taken against the dev server
-describe the bundler rather than the application.
-
-Google Books was evaluated and rejected. An unauthenticated request returned
-HTTP 429 on the first attempt, and keyed access would require a proxy and
-therefore a backend, which is not justified when Open Library works client-side.
+On a warm reload, cached search and work-detail entries avoid repeat JSON
+requests. Covers remain browser-cached independently.
 
 ## Deployment
-
-### Platform choice cannot add marks
-
-The question is settled explicitly here because it appears to carry more weight
-than it does.
-
-- No prize is tied to a platform. Every sponsor prize goes to the same ten
-  overall winners, and there is no per-platform category.
-- The rules permit "any other provider", listing the sponsors as examples rather
-  than a closed set.
-- Hosting is not among the judging criteria.
-
-Hosting can therefore only lose marks, by failing on Execution when a judge
-opens the URL. Reliability is the only relevant selection criterion.
-
-### Decision: Vercel rather than ChatGPT Sites
-
-ChatGPT Sites was the more interesting option, being OpenAI's own surface with
-documented native support for site tools. It was investigated and rejected on
-three risks. None is individually fatal; together they were not worth carrying
-against the deadline given that Vercel presents none of them.
-
-1. **Regional availability.** Reported as unavailable in the EEA, Switzerland
-   and the UK. The documentation neither confirms nor denies this, and the
-   project is built in the UK.
-2. **Access defaults.** A Site is reachable without a ChatGPT account only when
-   sharing is explicitly set to "anyone on the Internet", and public publishing
-   is disabled by default in Enterprise workspaces. A judge encountering a
-   sign-in wall is the worst available outcome.
-3. **Maturity.** The product shipped in July 2026 and remains in public beta.
-
-The advantage was presentational rather than technical, and no prize depends on
-the choice.
-
-### Static export
 
 TBR has no backend, no API routes and no server-side data: Open Library is called
 from the browser and the library lives in `localStorage`. The safest artefact is
 therefore plain HTML, CSS and JavaScript, which any host can serve.
-`next.config.ts` sets `output: "export"`, `npm run build` emits `out/` at
-approximately 1.4MB, and that directory constitutes the site. `vercel --prod`
-publishes it without server configuration.
+`next.config.ts` sets `output: "export"`, and `npm run build` emits `out/`.
+Vercel builds the linked project from source; the same output can be served by
+any HTTPS static host.
 
 Static export forced one routing decision. It cannot serve a dynamic segment
 without `generateStaticParams`, and the build fails outright:
@@ -324,16 +254,5 @@ Two consequences follow. `next start` no longer applies, so production behaviour
 must be measured by serving `out/`. And there is no image optimiser, which makes
 loading covers directly a requirement rather than a preference.
 
-### Deployment checklist
-
-- [x] Served over HTTPS, as WebMCP requires a secure context
-- [x] Publicly reachable, with no login or interstitial
-- [x] Tools registered from the top-level page, never an iframe, since ChatGPT
-      does not discover tools inside iframes
-- [x] Origin-isolated; `document.domain` is never set, and the `tools`
-      Permissions Policy remains at its `self` default
-- [x] `openlibrary.org` and `covers.openlibrary.org` reachable from the browser;
-      both send CORS `*`, and Vercel sets no CSP by default
-- [ ] Deployed URL opened in the ChatGPT browser on a cold profile, on a machine
-      that has never run the dev server, with the indicator reading "7 tools
-      live"
+Deployment and bundle checks are documented in
+[06-verification.md](06-verification.md).

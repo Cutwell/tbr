@@ -5,10 +5,9 @@
 TBR is a personal reading list. Each book occupies one of three shelves (TBR,
 Read, DNF) and carries an optional rating from one to five stars.
 
-The application must be complete without an agent. "Execution" is a judged
-criterion requiring a working product with a complete experience, and an
-interface that exists only to host tools does not satisfy it. Agent support
-extends the product rather than constituting it.
+The application is complete without an agent. Agent support extends the product
+rather than constituting it, so every core library action remains available in
+the human interface.
 
 ## Human journeys
 
@@ -19,7 +18,7 @@ the TBR shelf. Search queries Open Library, so results carry author, first
 publication year and cover art without further input.
 
 A manual "add by title" path covers books the catalogue lacks or misidentifies.
-It is inexpensive to build and prevents a dead end during a live demonstration.
+It provides a reliable fallback when catalogue search is insufficient.
 
 ### J2 — Change shelf
 
@@ -134,10 +133,9 @@ The reader uploads a photograph of a bookshelf. The agent identifies the titles
 and adds them.
 
 The application contains no vision code. Identification happens agent-side, and
-the site supplies only `search_catalog` to resolve a title to a catalogue
-record and `add_book` to file it. The journey requires no tools beyond those A1
-already needs, which makes it the highest-value addition per hour of work in the
-project.
+the site supplies `search_catalog` to resolve a title to a catalogue record and
+`add_book` to file it. The journey composes the agent's vision with the
+catalogue and storage capabilities already exposed by the site.
 
 Two design consequences follow: `add_book` must be safe to call repeatedly, and
 the interface must react visibly to each call so that books appear individually
@@ -201,7 +199,7 @@ in that slot instead, which is why `shelfDate.ts` exists: one place that answers
 
 Omissions and their rationale:
 
-- **No ISBN.** Open Library returns approximately 100 per work, at high output
+- **No ISBN.** Open Library can return many identifiers per work, at high output
   cost and no benefit to any journey.
 - **No genre or subject.** Open Library subjects are long and noisy. Taste
   signals derive from author and rating instead.

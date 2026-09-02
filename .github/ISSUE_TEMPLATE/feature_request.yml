@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a focused improvement to TBR.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: User need
+      description: What problem should this solve, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the result rather than only the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and risks
+      description: Note alternatives and any effects on UI, storage, Open Library, or WebMCP tools.
+

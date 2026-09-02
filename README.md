@@ -6,7 +6,7 @@ you gave up on, and exposes all of it to AI agents as
 
 Built for the [WebMCP Challenge](https://webmcp.devpost.com).
 
-> **Live demo:** <https://tbr-navy.vercel.app> · **Video:** _(pending)_
+> **Live demo:** <https://tbr-navy.vercel.app>
 
 ---
 
@@ -22,8 +22,8 @@ them spends the agent's context on data it should never have had to parse.
 
 TBR performs the aggregation instead. `get_taste_profile` reduces the whole
 reading history on the site (favourite authors by mean rating, abandoned
-authors, era distribution, finishing rate) to roughly 700 characters, closing
-with a computed signal line:
+authors, era distribution, finishing rate) to a compact response within the
+tool budget, closing with a computed signal line:
 
 ```
 Signal: Has given up on Neal Stephenson more than once.
@@ -75,7 +75,7 @@ Five properties of the set are worth stating explicitly.
   changed two answers — `openWorldHint` was wrong on five of seven tools, and
   `update_book` turned out to be genuinely destructive (it *replaces* a rating
   or shelf, and the spec's bar for `false` is "only additive updates"). It says
-  so rather than claiming the flattering version. Reasoning in
+  so rather than describing the update as purely additive. Reasoning in
   [docs/04-tool-design.md](docs/04-tool-design.md).
 
 ## Running locally
@@ -228,23 +228,20 @@ mode, so no component carries a `dark:` variant.
 
 The application is a static export (`output: "export"` in `next.config.ts`).
 With no backend, no API routes and no server-side data, `npm run build` emits
-`out/` at approximately 1.4MB, and that directory constitutes the entire site.
+`out/`, and that directory constitutes the entire site.
 
-This makes it portable to any of the hackathon's accepted hosts. It is deployed
-on Vercel, where `vercel --prod` publishes `out/` without server configuration.
-ChatGPT Sites was considered and rejected on regional availability and
-access-control defaults, neither of which was worth carrying against the
-deadline; `out/` would deploy as readily to Netlify, Cloudflare Pages or Render.
+The resulting static artefact is portable to any HTTPS static host. The live
+site is deployed on Vercel, where `vercel --prod` builds the linked project from
+source.
 
-On any host, WebMCP requires a secure context, so the site must be served over
-HTTPS with no login wall in front of it. The full reasoning is in
-[docs/05-architecture.md](docs/05-architecture.md#decision-vercel-rather-than-chatgpt-sites).
+The deployment uses HTTPS and has no login wall. Deployment details are in
+[docs/05-architecture.md](docs/05-architecture.md#deployment).
 
 ## Docs
 
-The design documentation is in [docs/](docs/README.md): the hackathon brief, a
-verified WebMCP API reference, tool design with the output-budget calculations,
-architecture, the risk register, and the roadmap.
+The [design documentation](docs/README.md) covers the WebMCP API surface,
+product journeys, tool schemas and output budgets, architecture, and
+reproducible verification.
 
 ## Licence
 

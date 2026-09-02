@@ -3,12 +3,9 @@ import type { Book } from "@/lib/types";
 /**
  * The demo library.
  *
- * Loaded on request from the first-run panel, never automatically. An empty
- * library is a broken demo — a judge with cold storage would ask "what should
- * I read next?" and get an honest "not enough history yet" — but seeding a
- * stranger's reading list with books they have never read is the worse of the
- * two problems. The panel makes it one click instead of zero. See
- * docs/07-risks.md, R2.
+ * Loaded on request from the first-run panel, never automatically. This keeps a
+ * new reader's shelf empty while leaving a representative example one click
+ * away.
  *
  * The history is curated rather than random, so the taste profile has real
  * structure to find: a cluster of highly-rated Le Guin, repeated abandonment

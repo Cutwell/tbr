@@ -4,9 +4,8 @@ The toolset comprises seven tools, each mapped to a journey in
 [03-product-spec.md](03-product-spec.md).
 
 Chrome's guidance is deliberately non-prescriptive about tool count, directing
-designers to work from user goals rather than a target number. Seven is
-defensible on that basis. Tool-selection accuracy degrades beyond roughly ten,
-which leaves headroom rather than crowding the ceiling.
+designers to work from user goals rather than a target number. Each of TBR's
+seven tools maps to a distinct journey or reusable step.
 
 | # | Tool | read­Only | destructive | idempotent | openWorld | Journey |
 |---|---|---|---|---|---|---|
@@ -151,7 +150,7 @@ distinction the agent cannot otherwise make.
 
 ## 3. `get_taste_profile`
 
-The central tool of the submission.
+The central tool for recommendation journeys.
 
 Journey A1 requires the agent to understand taste across the entire Read and DNF
 history. Within a 1,500-character budget the agent cannot page through 80 books
@@ -385,9 +384,8 @@ recommendation hint only when listing the entire `tbr` shelf, which is the shape
 of a "what next?" question, and stays silent on filtered searches, which usually
 belong to some other task. Unconditional guidance trains agents to disregard it.
 
-Measured cost: the taste profile grew from 606 to 732 characters when the
-navigation handoff was added, and a full TBR listing measures 451. Both sit well
-inside the 1,500-character budget.
+Both responses pass through the same 1,500-character budget guard as every
+other tool result.
 
 ### 3. The page itself
 
@@ -432,8 +430,8 @@ because a table cut mid-row misparses more readily than a short one.
 
 ## Annotation defaults
 
-The mutating tools once sat in the table above with a `—` in every column. That
-was never neutral, and a host is entitled to read it as a claim.
+Annotations are explicit because omission invokes MCP defaults rather than
+expressing uncertainty.
 
 An omitted annotation is not read as "unspecified". MCP defines defaults, and
 they are pessimistic by design. Quoted wording is from the MCP schema,
@@ -449,27 +447,20 @@ they are pessimistic by design. Quoted wording is from the MCP schema,
 `destructiveHint` and `idempotentHint` are meaningful only when `readOnlyHint`
 is false. `openWorldHint` carries no such restriction and applies to every tool.
 
-So an unannotated mutating tool presents to a host as destructive,
-non-idempotent and open-world — a worse profile than `remove_book`, which
-actually destroys data but declares its intent and pairs it with a
-confirmation. Silence is the loudest possible claim.
+An unannotated mutating tool therefore presents to a host as destructive,
+non-idempotent and open-world. `remove_book` declares its behavior explicitly
+and pairs deletion with confirmation.
 
 Every tool now states every applicable hint.
 
-### What writing them out found
+### Annotation decisions
 
-Filling in the table did not confirm what was expected of it. Two of the three
-findings went the other way.
-
-**`update_book` is destructive.** The intuition going in was that neither write
-tool "destroys anything", so both should declare `destructiveHint: false`. That
-was wrong. The bar for `false` is *"performs only additive updates"*, not
-"harmless" or "reversible". `update_book` replaces a shelf, a rating, a note or
-a finish date, and the previous value is gone. Declaring it additive would have
-been false, and false in the direction that flatters: choosing the annotation
-that attracts less scrutiny over the one that is true. It is also right on the
-merits — an agent that wrongly moves a book to `dnf` and rates it 1 has
-overwritten the reader's own judgment of a book they read.
+**`update_book` is destructive.** The bar for `false` is *"performs only
+additive updates"*, not
+"harmless" or "reversible". `update_book` replaces a shelf, rating, note, or
+finish date, so the previous value is gone. An incorrect move to `dnf` or a new
+rating can overwrite the reader's prior judgment; `destructiveHint: true`
+describes that behavior accurately.
 
 It gets no confirmation dialog regardless. Rating a book is the most common
 thing a reader will ask an agent to do, and a prompt on every star would make J5
@@ -477,17 +468,11 @@ worse than doing it by hand. The properties that would justify one are all
 absent: it touches one named book, through a closed set of fields, with a
 bounded payload and no content crossing in from another origin.
 
-**`openWorldHint` was wrong on five of seven tools.** Its default is `true`, so
-every tool that stayed silent was claiming to reach external systems. Only
+**`openWorldHint` distinguishes external access.** Its default is `true`. Only
 `search_catalog` and `add_book` do; the other five touch nothing but the local
-store. This was not part of the original gap — it surfaced only once the
-defaults were written down in one place.
+store, so they declare `false`.
 
-**The polyfill's readback hides most of this.** `@mcp-b/webmcp-polyfill`
-preserves all five hints when a tool is registered (`normalizeToolAnnotations`),
-but `getTools()` projects them down to `readOnlyHint` and `untrustedContentHint`
-alone (`toWebMcpAnnotations`). Reading annotations back through a polyfilled
-browser therefore shows two hints no matter how many were declared — including
-for `remove_book`, whose `destructiveHint` has never been visible that way. The
-hints do reach the host at registration; only the local readback is lossy. Do
-not use `getTools()` in a polyfilled browser to verify this table.
+The development polyfill's `getTools()` readback exposes only
+`readOnlyHint` and `untrustedContentHint`, although all hints are preserved at
+registration. Descriptor verification therefore inspects the registered source
+rather than treating polyfill readback as complete.

@@ -5,9 +5,9 @@ has abandoned, and exposes that library to AI agents as
 [WebMCP](https://developer.chrome.com/docs/ai/webmcp) tools. It was built for the
 [WebMCP Challenge](https://webmcp.devpost.com).
 
-This folder holds the design documentation, kept current as the app shipped. The
-[repository README](../README.md) is the tour; these documents are the
-reasoning behind it.
+This folder documents the shipped product. The
+[repository README](../README.md) is the short tour; the reading order below
+provides the evidence behind its design and implementation claims.
 
 ## Premise
 
@@ -16,18 +16,18 @@ is a question about taste, and answering it requires weighing an entire reading
 history at once. TBR computes that history into a profile an agent can consume
 in a single call, rather than exposing rows for the agent to page through.
 
-## Reading order
+## Recommended reading order
 
 | Document | Contents |
 |---|---|
-| [01-hackathon-brief.md](01-hackathon-brief.md) | Deadline, prizes, judging criteria, submission requirements |
 | [02-webmcp-reference.md](02-webmcp-reference.md) | Verified API surface, the namespace divergence, hard limits |
-| [03-product-spec.md](03-product-spec.md) | User journeys, data model, screens |
+| [03-product-spec.md](03-product-spec.md) | Shipped human and agent journeys, data model, screens |
 | [04-tool-design.md](04-tool-design.md) | The seven tools: schemas, output budgets, security hints |
 | [05-architecture.md](05-architecture.md) | Stack, catalogue, storage, performance, deployment |
-| [06-roadmap.md](06-roadmap.md) | The five-day plan and its status |
-| [07-risks.md](07-risks.md) | Risk register and mitigations |
-| [08-submission.md](08-submission.md) | Demo script and submission copy |
+| [06-verification.md](06-verification.md) | Reproducible build and tool verification |
+
+Contributor workflow is documented separately in
+[09-contributing.md](09-contributing.md).
 
 ## Founding decisions
 

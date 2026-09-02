@@ -16,7 +16,7 @@ surfaces.
 
 | Source | Namespace | Method |
 |---|---|---|
-| ChatGPT site tools (the judging surface) | `document.modelContext` | `registerTool()` |
+| ChatGPT site tools | `document.modelContext` | `registerTool()` |
 | Chrome, imperative API | `document.modelContext` | `registerTool()` |
 | W3C proposal, August 2025 | `navigator.modelContext` | `provideContext({tools})` |
 
@@ -93,8 +93,7 @@ const err = (text)       => ({ content: [{ type: "text", text }], isError: true 
 ### Human-in-the-loop
 
 `agent.requestUserInteraction()` allows a tool to block on user consent during
-execution. It is the strongest available signal for the "humans and agents
-working together" criterion, and `remove_book` uses it.
+execution. `remove_book` uses it to keep the reader in control of deletion.
 
 The signature is documented inconsistently: Chrome destructures the second
 parameter as `{ signal }`, while the proposal names it `agent`. Treating it as
@@ -112,20 +111,21 @@ requirements". They are treated here as hard limits.
 | Parameter description | 150 characters |
 | Tool output | 1,500 characters |
 
-The output cap is the defining constraint of the project. For calibration, a raw
-Open Library search response for two books is 2,838 bytes, most of it a
-100-element ISBN array. Naive pass-through exceeds the budget on the first call,
-which makes field projection and result caps a correctness requirement rather
-than an optimisation. See [04-tool-design.md](04-tool-design.md).
+The output cap is the defining constraint of the project. Raw Open Library
+records include large arrays and fields that these journeys do not use. Field
+projection and result caps are therefore correctness requirements rather than
+optimisations. See [04-tool-design.md](04-tool-design.md).
 
 ## Security annotations
 
 | Annotation | Meaning | Applied to |
 |---|---|---|
 | `readOnlyHint` | Does not mutate state; the agent may call it freely | All search, profile and navigation tools |
-| `destructiveHint` | Destroys data | `remove_book` |
+| `destructiveHint` | May replace or remove existing data | `update_book`, `remove_book`; `false` on additive `add_book` |
+| `idempotentHint` | Repeating a call has no additional effect | All three mutating tools |
+| `openWorldHint` | May interact with external systems | `search_catalog`, `add_book`; `false` on the other five tools |
 | `untrustedContentHint` | Payload is externally sourced and may carry injected instructions | `search_catalog` |
-| `exposedTo` | Restricts calling origins | Unused; the default suits a public demo |
+| `exposedTo` | Restricts cross-origin discovery | Unused; TBR requires no cross-origin exposure |
 
 `untrustedContentHint` on `search_catalog` reflects a real property of the data
 rather than a formality. Open Library records are editable by anyone, so a title
@@ -147,35 +147,17 @@ TBR registers from the app shell, which is top-level on every route.
 | Surface | Procedure |
 |---|---|
 | Extension | [Model Context Tool Inspector](https://chromewebstore.google.com/detail/model-context-tool-inspec/gbpdfapgefenggkahomfgkhfehlcenpd) invokes tools without an agent. The fastest development loop. |
-| Chrome | Set `chrome://flags/#enable-webmcp-testing` to Enabled and relaunch. Chrome 146+ ships `modelContext`; origin trial from 149. |
+| Chrome | Set `chrome://flags/#enable-webmcp-testing` to Enabled and relaunch, or use the origin trial available from Chrome 149. |
 | ChatGPT desktop | Open the URL in the in-app browser, then **Site tools** in the address bar, which lists available tools and recent calls. |
 
-## Unconfirmed behaviour
+## Compatibility strategy
 
-The first seven tools were exercised live in ChatGPT's in-app browser:
-registered, listed under **Site tools**, callable, and returning output the agent
-acted on. This closes the namespace risk (R1 in [07-risks.md](07-risks.md))
-against the real judging surface.
+All seven tools use the same adapter and MCP content-block response shape. The
+adapter covers both documented namespaces and registration methods; the app
+reports whether it found a native host, the development polyfill, or no host.
 
-`navigate_to` was added after that pass and has been exercised only through the
-development harness and the Inspector. It registers through the same adapter and
-carries no host-specific behaviour, so the residual risk is low, but it should
-be confirmed on the live URL during the rehearsal ([06-roadmap.md](06-roadmap.md)).
-
-Three lower-level questions were not individually instrumented. In each case the
-implementation is defensive enough that both branches behave identically from
-the outside, which is why the distinction was not observable.
-
-1. **Return shape.** Whether ChatGPT requires `{content:[…]}` or accepts a bare
-   object is unknown. `format.ts` always emits the content-block form, so the
-   two cases were never distinguished.
-2. **`requestUserInteraction`.** Whether it fired natively or whether
-   `remove_book` fell back to the app's own dialog is unknown, since the
-   implementation makes both paths equivalent externally. One property is
-   established: a host may expose the method and reject with "unsupported" on
-   call, as the Codex shim does, so presence is not a capability check.
-3. **Overrun behaviour.** Never observed, as no tool exceeded the budget during
-   testing. The largest measured output was 732 characters.
-
-Item 2 has practical consequences: the demo's human-in-the-loop segment should
-describe the path that actually executes. Logging in each branch resolves it.
+`remove_book` does not depend on native `requestUserInteraction` support. It
+uses the host method when available and falls back to the application's own
+confirmation dialog when the method is absent or rejects. Both paths await an
+explicit reader decision before deletion. Reproducible repository checks are
+listed in [06-verification.md](06-verification.md).

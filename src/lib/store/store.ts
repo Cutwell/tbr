@@ -325,12 +325,8 @@ function addMany(inputs: NewBook[]): { added: number; duplicates: number } {
 /**
  * Loads whatever the reader already has. Nothing is seeded.
  *
- * TBR used to plant the 80-book demo library on first visit, on the reasoning
- * that an empty library is a broken demo (docs/07-risks.md, R2). That solved
- * the right problem the wrong way: it presumed consent to fill someone's
- * reading list with books they had never read, and it hid the fact that the
- * shelf is genuinely theirs. The first-run panel now does that job explicitly,
- * offering the demo as one of four ways in rather than choosing for them.
+ * The first-run panel offers the demo library explicitly rather than filling a
+ * new reader's shelf automatically. A stored empty array remains a valid state.
  */
 function hydrate(): void {
   if (hydrated || typeof window === "undefined") return;
