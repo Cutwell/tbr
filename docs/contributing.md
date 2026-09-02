@@ -12,6 +12,12 @@ task verify
 
 This lints and type-checks the source, creates the static export, and confirms that all registered WebMCP tools survive bundling. No automated browser test suite or coverage threshold is configured, so manually exercise affected routes. WebMCP changes must also be checked in a capable browser for registration, expected annotations, visible store updates, and confirmation of destructive actions.
 
+Installing dependencies also configures the repository's Husky hooks. Before
+each commit, lint-staged formats supported staged files with Prettier and
+restages the result, then the full `npm run lint` check must pass. Use
+`npm run format` when deliberately formatting the entire repository. Do not
+bypass the hook unless diagnosing the hook itself.
+
 ## Commits
 
 Use Conventional Commit-style subjects:
@@ -30,4 +36,3 @@ Use an imperative, lower-case summary after the type, keep each commit focused, 
 Open a pull request only when it is reviewable and `task verify` passes. Complete the repository template: describe the user-visible result and motivation, link issues with `Closes #123` where applicable, identify affected routes or WebMCP tools, and record both automated and manual verification. Add before/after screenshots for UI changes.
 
 Call out changes involving persistence, external catalogue data, tool schemas or annotations, destructive behavior, and `requestUserInteraction`. Do not merge until review comments are resolved and the required `Lint` and `Verify` checks pass. Prefer squash-merging unless preserving a deliberate sequence of commits helps explain the change; the resulting commit must still follow the convention above.
-

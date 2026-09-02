@@ -11,6 +11,7 @@ The central architectural rule is that WebMCP tools never write to React state o
 - `npm install`: install the locked dependency set.
 - `npm run dev`: start the local Next.js development server.
 - `npm run lint`: run ESLint with Next.js Core Web Vitals and TypeScript rules.
+- `npm run format`: format supported repository files with Prettier.
 - `npx tsc --noEmit`: type-check without producing files.
 - `npm run build`: create the static export in `out/`.
 - `task check`: run linting and type-checking together.
@@ -27,4 +28,4 @@ No test framework or coverage threshold is configured. Treat `task verify` as th
 
 ## Commit & Pull Request Guidelines
 
-Follow the canonical policy in `docs/contributing.md`. Use focused Conventional Commits such as `feat:`, `fix(webmcp):`, or `docs:`; append `!` for breaking behavior. Before requesting review, run `task verify` and manually exercise affected routes. Complete `.github/pull_request_template.md`, link relevant issues, and include before/after screenshots for UI work. Explicitly call out persistence, external data, tool schema or annotation, confirmation, and destructive-action changes. Pull requests require resolved review comments and passing `Lint` and `Verify` checks.
+Follow the canonical policy in `docs/contributing.md`. The Husky pre-commit hook formats staged files and requires the full linter to pass; do not bypass it. Use focused Conventional Commits such as `feat:`, `fix(webmcp):`, or `docs:`; append `!` for breaking behavior. Before requesting review, run `task verify` and manually exercise affected routes. Complete `.github/pull_request_template.md`, link relevant issues, and include before/after screenshots for UI work. Pull requests require resolved review comments and passing `Lint` and `Verify` checks.

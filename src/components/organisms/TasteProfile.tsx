@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { BookCover } from "@/components/molecules/BookCover";
 import { StarRating } from "@/components/molecules/StarRating";
-import type { AuthorAffinity, Book, TasteProfile as Profile } from "@/lib/types";
+import type {
+  AuthorAffinity,
+  Book,
+  TasteProfile as Profile,
+} from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
 interface TasteProfileProps {
@@ -22,15 +26,17 @@ interface TasteProfileProps {
  * essay about someone's reading.
  */
 export function TasteProfile({ profile, recent }: TasteProfileProps) {
-  if (profile.sparse) {
+  const { counts } = profile;
+
+  if (counts.tbr + counts.read + counts.dnf === 0) {
     return (
       <div className="mx-auto max-w-2xl border border-dashed border-rule px-8 py-20 text-center">
         <h2 className="font-display text-3xl text-balance text-ink">
-          Not enough history yet
+          Nothing on your shelves yet
         </h2>
         <p className="mt-3 text-pretty text-ink-soft">
-          Rate a few books you have finished and a profile will build itself
-          here — the same one your agent reads before recommending anything.
+          Add a book and the profile starts building from that one — the same
+          profile your agent reads before recommending anything.
         </p>
       </div>
     );
@@ -38,8 +44,35 @@ export function TasteProfile({ profile, recent }: TasteProfileProps) {
 
   return (
     <div className="mx-auto w-full max-w-5xl">
+      <dl className="grid grid-cols-2 gap-x-8 gap-y-6 border-y border-rule py-6 sm:grid-cols-3 lg:grid-cols-6">
+        <Figure label="Waiting" value={counts.tbr} tone="var(--shelf-tbr)" />
+        <Figure label="Finished" value={counts.read} tone="var(--shelf-read)" />
+        <Figure label="Abandoned" value={counts.dnf} tone="var(--shelf-dnf)" />
+        <Figure label="Books rated" value={profile.totalRated} />
+        <Figure
+          label="Average rating"
+          value={profile.averageRating?.toFixed(1) ?? "—"}
+        />
+        <Figure
+          label="Finish rate"
+          value={
+            profile.finishingRate === null ? "—" : `${profile.finishingRate}%`
+          }
+        />
+      </dl>
+
+      {/* The page shows what it has from the first book, while `sparse` — the
+          flag the agent is held to — stays stricter. Saying so is cheaper than
+          letting six numbers imply a taste that is not there yet. */}
+      {profile.sparse && (
+        <p className="u-meta mt-3 text-ink-faint">
+          Still early. Finish and rate a few more and the picture below fills
+          in.
+        </p>
+      )}
+
       {profile.signal && (
-        <blockquote className="max-w-3xl">
+        <blockquote className="mt-12 max-w-3xl">
           <p className="u-meta text-ink-faint">What your shelves say</p>
           <p className="font-display mt-3 text-[clamp(1.6rem,4vw,2.6rem)] leading-[1.15] text-balance text-ink">
             {profile.signal}
@@ -47,53 +80,53 @@ export function TasteProfile({ profile, recent }: TasteProfileProps) {
         </blockquote>
       )}
 
-      <dl className="mt-12 grid grid-cols-2 gap-x-8 gap-y-6 border-y border-rule py-6 sm:grid-cols-4">
-        <Figure label="Books rated" value={profile.totalRated} />
-        <Figure label="Average rating" value={profile.averageRating?.toFixed(1) ?? "—"} />
-        <Figure
-          label="Finish rate"
-          value={profile.finishingRate === null ? "—" : `${profile.finishingRate}%`}
-        />
-        <Figure label="Abandoned" value={profile.counts.dnf} />
-      </dl>
+      {(profile.loved.length > 0 || profile.disliked.length > 0) && (
+        <div className="mt-12 grid gap-x-10 gap-y-12 md:grid-cols-2">
+          {profile.loved.length > 0 && (
+            <AuthorList
+              heading="Authors you love"
+              note="Rated four stars or better, more than once."
+              tone="text-shelf-read"
+              authors={profile.loved}
+              render={(author) => (
+                <StarRating
+                  value={roundToRating(author.averageRating)}
+                  readOnly
+                  size={12}
+                />
+              )}
+            />
+          )}
 
-      <div className="mt-12 grid gap-x-10 gap-y-12 md:grid-cols-2">
-        {profile.loved.length > 0 && (
-          <AuthorList
-            heading="Authors you love"
-            note="Rated four stars or better, more than once."
-            tone="text-shelf-read"
-            authors={profile.loved}
-            render={(author) => (
-              <StarRating value={roundToRating(author.averageRating)} readOnly size={12} />
-            )}
-          />
-        )}
-
-        {profile.disliked.length > 0 && (
-          <AuthorList
-            heading="Authors you put down"
-            note="Abandoned, or rated poorly. The strongest signal you give."
-            tone="text-shelf-dnf"
-            authors={profile.disliked}
-            render={(author) => (
-              <span className="u-meta u-tnum text-ink-faint">
-                {author.abandoned > 0
-                  ? `${author.abandoned} abandoned`
-                  : `avg ${author.averageRating.toFixed(1)}`}
-              </span>
-            )}
-          />
-        )}
-      </div>
+          {profile.disliked.length > 0 && (
+            <AuthorList
+              heading="Authors you put down"
+              note="Abandoned, or rated poorly. The strongest signal you give."
+              tone="text-shelf-dnf"
+              authors={profile.disliked}
+              render={(author) => (
+                <span className="u-meta u-tnum text-ink-faint">
+                  {author.abandoned > 0
+                    ? `${author.abandoned} abandoned`
+                    : `avg ${author.averageRating.toFixed(1)}`}
+                </span>
+              )}
+            />
+          )}
+        </div>
+      )}
 
       {profile.eras.length > 0 && (
         <section className="mt-12">
-          <h2 className="font-display text-xl text-ink">When your books were written</h2>
+          <h2 className="font-display text-xl text-ink">
+            When your books were written
+          </h2>
           <ul className="mt-4 flex flex-col gap-2.5">
             {profile.eras.map((era) => (
               <li key={era.decade} className="flex items-center gap-4">
-                <span className="u-meta u-tnum w-12 shrink-0 text-ink-soft">{era.decade}s</span>
+                <span className="u-meta u-tnum w-12 shrink-0 text-ink-soft">
+                  {era.decade}s
+                </span>
                 <span className="h-2 flex-1 bg-paper-sunk">
                   <span
                     style={{ width: `${era.share}%` }}
@@ -127,7 +160,12 @@ export function TasteProfile({ profile, recent }: TasteProfileProps) {
                     {book.title}
                   </p>
                   {book.rating && (
-                    <StarRating value={book.rating} readOnly size={11} className="mt-1" />
+                    <StarRating
+                      value={book.rating}
+                      readOnly
+                      size={11}
+                      className="mt-1"
+                    />
                   )}
                 </Link>
               </li>
@@ -135,16 +173,27 @@ export function TasteProfile({ profile, recent }: TasteProfileProps) {
           </ul>
         </section>
       )}
-
     </div>
   );
 }
 
-function Figure({ label, value }: { label: string; value: string | number }) {
+interface FigureProps {
+  label: string;
+  value: string | number;
+  /** A raw CSS colour — the shelf figures carry their shelf's hue. */
+  tone?: string;
+}
+
+function Figure({ label, value, tone }: FigureProps) {
   return (
     <div>
       <dt className="u-meta text-ink-faint">{label}</dt>
-      <dd className="font-display u-tnum mt-1 text-3xl leading-none text-ink">{value}</dd>
+      <dd
+        className="font-display u-tnum mt-1 text-3xl leading-none text-ink"
+        style={tone ? { color: tone } : undefined}
+      >
+        {value}
+      </dd>
     </div>
   );
 }

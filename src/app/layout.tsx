@@ -34,7 +34,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TBR — a reading list your agent can read too",
+  title: "TBR — a library your agent can read too",
   description:
     "Track what you want to read, what you finished and what you gave up on — " +
     "and let an AI agent search your shelves, learn your taste and add books, " +
@@ -61,13 +61,19 @@ try {
   document.documentElement.dataset.theme = 'light';
 }`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>
-      <body className={`${fraunces.variable} ${karla.variable} ${dmMono.variable}`}>
+      <body
+        className={`${fraunces.variable} ${karla.variable} ${dmMono.variable}`}
+      >
         <AppShell>{children}</AppShell>
       </body>
     </html>

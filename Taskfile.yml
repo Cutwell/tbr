@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 # Deployment tasks for TBR.
 #
@@ -12,7 +12,7 @@ version: '3'
 # not a substitute for it.
 
 vars:
-  SITE_URL: https://tbr-navy.vercel.app
+  SITE_URL: https://project-tbr.vercel.app
   OUT_DIR: out
   # The registered toolset. `verify:tools` asserts each name survives into the
   # bundle, which catches a tool silently dropped from the array in tools.ts.
@@ -49,7 +49,7 @@ tasks:
       - next.config.ts
       - package.json
     generates:
-      - '{{.OUT_DIR}}/**/*'
+      - "{{.OUT_DIR}}/**/*"
 
   serve:
     desc: Serve the built export locally (next start does not apply to an export)
@@ -150,12 +150,12 @@ tasks:
       - vercel ls
 
   rollback:
-    desc: 'Roll production back to a previous deployment: task rollback -- <url>'
+    desc: "Roll production back to a previous deployment: task rollback -- <url>"
     silent: true
     cmds:
       - |
         if [ -z "{{.CLI_ARGS}}" ]; then
-          echo "Pass a deployment URL, e.g. task rollback -- https://tbr-abc123.vercel.app"
+          echo "Pass a deployment URL, e.g. task rollback -- https://project-tbr-abc123.vercel.app"
           echo "Run \`task status\` to list them."
           exit 1
         fi

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Three shelves, three colours: waiting, finished, abandoned. The last
+       book leans so the mark reads as books rather than a bar chart. -->
+  <rect x="2" y="7" width="8" height="22" rx="1" fill="#c4552d" />
+  <rect x="12" y="3" width="8" height="26" rx="1" fill="#3c6b4d" />
+  <rect x="22" y="9" width="7" height="20" rx="1" fill="#7d7267"
+        transform="rotate(11 25.5 29)" />
+</svg>

@@ -1,4 +1,4 @@
-# TBR — a reading list your agent can read too
+# TBR — a library your agent can read too
 
 A reading list that tracks what you want to read, what you finished, and what
 you gave up on, and exposes all of it to AI agents as
@@ -6,7 +6,7 @@ you gave up on, and exposes all of it to AI agents as
 
 Built for the [WebMCP Challenge](https://webmcp.devpost.com).
 
-> **Live demo:** <https://tbr-navy.vercel.app>
+> **Live demo:** <https://project-tbr.vercel.app>
 
 ---
 
@@ -39,15 +39,15 @@ Seven, registered on the top-level page. The rationale is in
 [docs/tool-design.md](docs/tool-design.md); the implementation is
 [src/lib/webmcp/tools.ts](src/lib/webmcp/tools.ts).
 
-| Tool | readOnly | destructive | idempotent | openWorld |
-|---|---|---|---|---|
-| `search_catalog` | yes | — | — | **yes** |
-| `search_my_books` | yes | — | — | no |
-| `get_taste_profile` | yes | — | — | no |
-| `add_book` | no | **no** | yes | **yes** |
-| `update_book` | no | **yes** | yes | no |
-| `remove_book` | no | **yes** | yes | no |
-| `navigate_to` | yes | — | — | no |
+| Tool                | readOnly | destructive | idempotent | openWorld |
+| ------------------- | -------- | ----------- | ---------- | --------- |
+| `search_catalog`    | yes      | —           | —          | **yes**   |
+| `search_my_books`   | yes      | —           | —          | no        |
+| `get_taste_profile` | yes      | —           | —          | no        |
+| `add_book`          | no       | **no**      | yes        | **yes**   |
+| `update_book`       | no       | **yes**     | yes        | no        |
+| `remove_book`       | no       | **yes**     | yes        | no        |
+| `navigate_to`       | yes      | —           | —          | no        |
 
 `search_catalog` also carries `untrustedContentHint`; `remove_book` also blocks
 on `requestUserInteraction`. `destructive` and `idempotent` are meaningful only
@@ -73,7 +73,7 @@ Five properties of the set are worth stating explicitly.
   An unannotated mutating tool declares itself destructive, non-idempotent and
   open-world: silence is the loudest claim available. Writing them all out
   changed two answers — `openWorldHint` was wrong on five of seven tools, and
-  `update_book` turned out to be genuinely destructive (it *replaces* a rating
+  `update_book` turned out to be genuinely destructive (it _replaces_ a rating
   or shelf, and the spec's bar for `false` is "only additive updates"). It says
   so rather than describing the update as purely additive. Reasoning in
   [docs/tool-design.md](docs/tool-design.md).
@@ -108,8 +108,8 @@ In development the toolset is also exposed on `window.__tbrTools`, which allows
 it to be exercised from the console without an agent:
 
 ```js
-await __tbrTools.get_taste_profile({})
-await __tbrTools.search_my_books({ status: "tbr", limit: 5 })
+await __tbrTools.get_taste_profile({});
+await __tbrTools.search_my_books({ status: "tbr", limit: 5 });
 ```
 
 ### Starting over, and the demo library
@@ -120,19 +120,21 @@ an agent to read a photograph of your shelves, import a Goodreads CSV, or load
 a demo library of 80 books curated so the taste profile has something real to
 work with.
 
-There is deliberately no reset *control*, since a control that erases a reading
+There is deliberately no reset _control_, since a control that erases a reading
 list does not belong in a reading list. Two functions are on `window` instead:
 
 ```js
-resetList()   // back to the empty first-run state
-loadDemo()    // load the 80-book demo library
+resetList(); // back to the empty first-run state
+loadDemo(); // load the 80-book demo library
 ```
 
 Both write through the store, so the shelf updates immediately — no reload. The
 Open Library cache is separate and clears on its own key:
 
 ```js
-Object.keys(localStorage).filter(k => k.startsWith("tbr.cache")).forEach(k => localStorage.removeItem(k));
+Object.keys(localStorage)
+  .filter((k) => k.startsWith("tbr.cache"))
+  .forEach((k) => localStorage.removeItem(k));
 ```
 
 ## How it is built
@@ -166,7 +168,7 @@ src/app/
 src/components/
   atoms/       Button  Chip  Icon  IconButton  ShelfDot  Spinner  Star  TextInput
   molecules/   BookCover  EmptyState  FilterBar  NavLink  SearchField
-               ShelfBadge  SortControl  StarRating  StatFigure  ThemeToggle
+               ShelfBadge  SortControl  StarRating  ThemeToggle
   organisms/   AgentIndicator  BookCard  BookGrid  ConfirmDialog  FirstRunPanel
                ImportPanel  NavigationController  SiteHeader  TasteProfile
                ToastStack
@@ -196,11 +198,11 @@ highlight on the changed book, without a panel competing with the covers.
 WebMCP is a live draft, and the implementations disagree about where the API
 lives.
 
-| | Namespace | Method |
-|---|---|---|
-| ChatGPT site tools | `document.modelContext` | `registerTool()` |
-| Chrome imperative | `document.modelContext` | `registerTool()` |
-| W3C proposal | `navigator.modelContext` | `provideContext()` |
+|                    | Namespace                | Method             |
+| ------------------ | ------------------------ | ------------------ |
+| ChatGPT site tools | `document.modelContext`  | `registerTool()`   |
+| Chrome imperative  | `document.modelContext`  | `registerTool()`   |
+| W3C proposal       | `navigator.modelContext` | `provideContext()` |
 
 Registering against the wrong one yields an application with no tools and no
 error message. [`adapter.ts`](src/lib/webmcp/adapter.ts) detects the host at
