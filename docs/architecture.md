@@ -1,4 +1,4 @@
-# 05 — Architecture
+# Architecture
 
 ## Governing constraint
 
@@ -93,7 +93,7 @@ Registration runs once at start-up, after the store has hydrated. The reverse
 order permits an early tool call to read an empty store.
 
 All seven tools register together and are never re-registered
-([04-tool-design.md](04-tool-design.md)). Where no host is available, the agent
+([tool-design.md](tool-design.md)). Where no host is available, the agent
 indicator reports "unsupported" and links to setup instructions. The explicit
 state distinguishes correct host detection from a broken page.
 
@@ -255,4 +255,4 @@ must be measured by serving `out/`. And there is no image optimiser, which makes
 loading covers directly a requirement rather than a preference.
 
 Deployment and bundle checks are documented in
-[06-verification.md](06-verification.md).
+[verification.md](verification.md).

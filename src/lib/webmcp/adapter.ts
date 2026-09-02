@@ -16,7 +16,7 @@ import { initializeWebMCPPolyfill } from "@mcp-b/webmcp-polyfill";
  * the codebase lives in this file; if the spec moves again, this is the only
  * thing that changes.
  *
- * See docs/02-webmcp-reference.md.
+ * See docs/webmcp-reference.md.
  *
  * `initializeWebMCPPolyfill()` runs before every locate attempt. It is a
  * documented no-op whenever `document.modelContext` already exists — a real

@@ -2,7 +2,7 @@ version: '3'
 
 # Deployment tasks for TBR.
 #
-# The app is a static export with no backend (docs/05-architecture.md), so
+# The app is a static export with no backend (docs/architecture.md), so
 # deploying is: verify locally, then hand the repo to Vercel. The project is
 # already linked via .vercel/project.json, so no target needs naming.
 #
@@ -114,7 +114,7 @@ tasks:
         fi
 
         # A redirect away from the origin is the login-wall signature the
-        # deployment checklist in docs/05-architecture.md guards against.
+        # deployment checklist in docs/architecture.md guards against.
         case "$final" in
           {{.SITE_URL}}*) ;;
           *) echo "FAIL: redirected off-origin, which suggests an auth wall."; exit 1 ;;

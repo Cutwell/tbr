@@ -393,7 +393,7 @@ function touch(ids: string[]): void {
  * Deliberately the console rather than a button. A control that erases a
  * reading list does not belong in a reading list, and one sitting beside a
  * loaded demo library is a mis-click away from destroying the thing being
- * demonstrated (docs/05-architecture.md). Everything lives in localStorage, so
+ * demonstrated (docs/architecture.md). Everything lives in localStorage, so
  * the data is the reader's outright; what was missing was a way to say "start
  * over" without opening devtools' storage inspector.
  *

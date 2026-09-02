@@ -13,7 +13,7 @@ import { recordToolCall } from "@/lib/webmcp/activity";
 /**
  * The TBR toolset.
  *
- * Seven tools, each mapped to a user journey in docs/03-product-spec.md. Every
+ * Seven tools, each mapped to a user journey in docs/product-spec.md. Every
  * one of them goes through the library store — never localStorage, never React
  * state — so an agent's writes re-render the UI exactly as a person's do. That
  * is the whole reason the changes are visible on screen as they happen.
@@ -27,7 +27,7 @@ import { recordToolCall } from "@/lib/webmcp/activity";
  * Goodreads CSV import is deliberately not a tool. It is a first-class UI path
  * instead — see `store/goodreads.ts` and `ImportPanel`.
  *
- * Schemas, budgets and rationale: docs/04-tool-design.md.
+ * Schemas, budgets and rationale: docs/tool-design.md.
  */
 
 function shelfSummary(): string {

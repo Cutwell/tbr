@@ -1,4 +1,4 @@
-# 03 — Product Spec
+# Product Spec
 
 ## Scope
 
@@ -124,7 +124,7 @@ stars and abandoned two military-SF novels, so The Dispossessed is a good
 match."*
 
 This is the primary journey and the one that is most tedious to perform
-manually. [04-tool-design.md](04-tool-design.md) covers why the site computes
+manually. [tool-design.md](tool-design.md) covers why the site computes
 the profile rather than the agent.
 
 ### A2 — Photographed shelf
@@ -227,7 +227,7 @@ Four routes, all statically exported.
 
 `/book` accepts a query parameter rather than a dynamic segment because a static
 export cannot serve `/book/[id]` without enumerating ids at build time, and book
-ids are runtime values. See [05-architecture.md](05-architecture.md).
+ids are runtime values. See [architecture.md](architecture.md).
 
 The agent indicator in the header is not required by any journey but is retained
 deliberately: a status dot opening a popover that lists the live tools, together

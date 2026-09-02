@@ -1,4 +1,4 @@
-# 06 — Verification
+# Verification
 
 TBR keeps its automated acceptance gate in `Taskfile.yml`. From a clean checkout:
 

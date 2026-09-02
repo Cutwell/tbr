@@ -1,7 +1,7 @@
-# 04 — WebMCP Tool Design
+# WebMCP Tool Design
 
 The toolset comprises seven tools, each mapped to a journey in
-[03-product-spec.md](03-product-spec.md).
+[product-spec.md](product-spec.md).
 
 Chrome's guidance is deliberately non-prescriptive about tool count, directing
 designers to work from user goals rather than a target number. Each of TBR's
@@ -33,7 +33,7 @@ loudly rather than degrading agent behaviour silently.
 ## The output budget as a design constraint
 
 Every tool shares a 1,500-character ceiling
-([02-webmcp-reference.md](02-webmcp-reference.md)). Two rules follow, and they
+([webmcp-reference.md](webmcp-reference.md)). Two rules follow, and they
 shape every schema below.
 
 ### Rule 1 — Delimited rows rather than JSON

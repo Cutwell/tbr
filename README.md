@@ -36,7 +36,7 @@ data and can pre-compute the exact summary an agent needs.
 ## The tools
 
 Seven, registered on the top-level page. The rationale is in
-[docs/04-tool-design.md](docs/04-tool-design.md); the implementation is
+[docs/tool-design.md](docs/tool-design.md); the implementation is
 [src/lib/webmcp/tools.ts](src/lib/webmcp/tools.ts).
 
 | Tool | readOnly | destructive | idempotent | openWorld |
@@ -76,7 +76,7 @@ Five properties of the set are worth stating explicitly.
   `update_book` turned out to be genuinely destructive (it *replaces* a rating
   or shelf, and the spec's bar for `false` is "only additive updates"). It says
   so rather than describing the update as purely additive. Reasoning in
-  [docs/04-tool-design.md](docs/04-tool-design.md).
+  [docs/tool-design.md](docs/tool-design.md).
 
 ## Running locally
 
@@ -235,7 +235,7 @@ site is deployed on Vercel, where `vercel --prod` builds the linked project from
 source.
 
 The deployment uses HTTPS and has no login wall. Deployment details are in
-[docs/05-architecture.md](docs/05-architecture.md#deployment).
+[docs/architecture.md](docs/architecture.md#deployment).
 
 ## Docs
 

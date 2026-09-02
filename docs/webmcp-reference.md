@@ -1,4 +1,4 @@
-# 02 — WebMCP Reference
+# WebMCP Reference
 
 Verified against primary sources on 29 August 2026. WebMCP is a moving target:
 the specification changed shape between the August 2025 proposal and the
@@ -44,7 +44,7 @@ The two methods differ semantically. `registerTool` is additive;
 `provideContext` replaces the entire toolset on each call. Any code that
 re-registers on state change must be correct under both, which is part of the
 rationale for registering once and never re-registering
-([04-tool-design.md](04-tool-design.md)).
+([tool-design.md](tool-design.md)).
 
 The adapter also initialises
 [`@mcp-b/webmcp-polyfill`](https://www.npmjs.com/package/@mcp-b/webmcp-polyfill)
@@ -114,7 +114,7 @@ requirements". They are treated here as hard limits.
 The output cap is the defining constraint of the project. Raw Open Library
 records include large arrays and fields that these journeys do not use. Field
 projection and result caps are therefore correctness requirements rather than
-optimisations. See [04-tool-design.md](04-tool-design.md).
+optimisations. See [tool-design.md](tool-design.md).
 
 ## Security annotations
 
@@ -160,4 +160,4 @@ reports whether it found a native host, the development polyfill, or no host.
 uses the host method when available and falls back to the application's own
 confirmation dialog when the method is absent or rejects. Both paths await an
 explicit reader decision before deletion. Reproducible repository checks are
-listed in [06-verification.md](06-verification.md).
+listed in [verification.md](verification.md).
