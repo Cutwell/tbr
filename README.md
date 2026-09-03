@@ -1,4 +1,4 @@
-# TBR
+<h1><img src="src/app/icon.svg" alt="" width="32" height="32" align="absmiddle" /> TBR</h1>
 
 A reading list that you and an AI agent can use together. Track books you want
 to read, have finished, or gave up on; TBR exposes the same library to agents
